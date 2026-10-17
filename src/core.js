@@ -176,13 +176,20 @@
 
   /* level : { places:[{id,truth:[x,y]}], paths:[{id,truth:[[x,y]…]}], tol:{ok,near} }
      placed : { id:{x,y} } ; drawn : { id:[{x,y}…] } */
+  /* Crédit continu : 1 dans la tolérance, 0,6 à la limite « presque », puis décroît jusqu'à 0 — une erreur de peu coûte peu. */
+  function creditFor(err, tol) {
+    if (err <= tol.ok) return 1;
+    if (err <= tol.near) return 1 - 0.4 * (err - tol.ok) / (tol.near - tol.ok);
+    var far = tol.near * 1.8;
+    return err >= far ? 0 : 0.6 * (1 - (err - tol.near) / (far - tol.near));
+  }
   function score(level, placed, drawn) {
     var tol = level.tol || { ok: 12, near: 20 };
-    var ptol = level.ptol || { ok: 6, near: 10 };
+    var ptol = level.ptol || { ok: 8, near: 14 };
     var pairs = [];
     level.places.forEach(function (pl) { if (placed[pl.id]) pairs.push([placed[pl.id], { x: pl.truth[0], y: pl.truth[1] }]); });
     var al = align(pairs, 0.8, 1.2);
-    var items = [], ok = 0, near = 0;
+    var items = [], ok = 0, near = 0, credit = 0;
     level.places.forEach(function (pl) {
       var it = { id: pl.id, kind: 'place', err: null, verdict: 'ko' };
       if (placed[pl.id]) {
@@ -190,7 +197,8 @@
         it.err = dist(q, { x: pl.truth[0], y: pl.truth[1] });
         it.at = q;
         if (it.err < tol.ok) { it.verdict = 'ok'; ok++; } else if (it.err < tol.near) { it.verdict = 'near'; near++; }
-      }
+        it.credit = creditFor(it.err, tol); credit += it.credit;
+      } else it.credit = 0;
       items.push(it);
     });
     (level.paths || []).forEach(function (pa) {
@@ -201,20 +209,21 @@
         it.err = chamfer(moved, toPts(pa.truth));
         it.at = moved;
         if (it.err < ptol.ok) { it.verdict = 'ok'; ok++; } else if (it.err < ptol.near) { it.verdict = 'near'; near++; }
-      }
+        it.credit = creditFor(it.err, ptol); credit += it.credit;
+      } else it.credit = 0;
       items.push(it);
     });
     var total = items.length;
-    var pct = total ? Math.round(100 * (ok + 0.5 * near) / total * 10) / 10 : 0;
+    var pct = total ? Math.round(100 * credit / total * 10) / 10 : 0;
     return { score: pct, ok: ok, near: near, total: total, items: items, align: al };
   }
 
-  /* étoiles : 1 ≥ 60, 2 ≥ 80, 3 ≥ 95 ET menteurs/fautifs soupçonnés */
+  /* étoiles : 1 ≥ 50, 2 ≥ 72, 3 ≥ 88 ET menteurs/fautifs soupçonnés */
   function stars(pct, level, suspects) {
     var s = 0;
-    if (pct >= 60) s = 1;
-    if (pct >= 80) s = 2;
-    if (pct >= 95) {
+    if (pct >= 50) s = 1;
+    if (pct >= 72) s = 2;
+    if (pct >= 88) {
       var need = (level.faulty || []);
       var allSus = need.every(function (id) { return suspects && suspects[id]; });
       s = allSus ? 3 : 2;

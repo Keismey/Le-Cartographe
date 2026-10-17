@@ -81,6 +81,7 @@
       else if (name === 'draw') tone(330, .05, 'sawtooth', .03);
       else if (name === 'chime') { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .5, 'triangle', .11, i * .12); }); }
       else if (name === 'low') tone(196, .3, 'triangle', .1);
+      else if (name === 'star') { tone(880, .35, 'triangle', .13); tone(1318, .45, 'sine', .07, .05); }
     } catch (e) {}
   }
   function buzz(ms) { if (save.settings.vibrate) try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
@@ -127,7 +128,15 @@
   /* ───────────── atlas ───────────── */
   function unlocked(idx) { if (idx === 0) return true; var p = save.progress[LEVELS[idx - 1].id]; return !!(p && p.stars >= 1); }
   function ico(name, cls) { var s = Art.src('ui.' + name); return s ? h('img', { class: 'ico' + (cls ? ' ' + cls : ''), src: s, alt: '', draggable: 'false' }) : null; }
-  function starImgs(n, cls) { var a = []; for (var i = 0; i < 3; i++) a.push(ico(i < n ? 'etoile' : 'etoile_vide', cls) || h('span', { class: i < n ? '' : 'off', text: '★' })); return a; }
+  function starImgs(n, cls, anim) {
+    var a = [];
+    for (var i = 0; i < 3; i++) {
+      var el = ico(i < n ? 'etoile' : 'etoile_vide', cls) || h('span', { class: i < n ? '' : 'off', text: '★' });
+      if (anim) { el.classList.add('pop'); el.style.animationDelay = (.45 + i * .42) + 's'; }
+      a.push(el);
+    }
+    return a;
+  }
   function portrait(w, cls) {
     var s = Art.src('portraits.' + w.id);
     return s ? h('img', { class: 'portrait ' + (cls || ''), src: s, alt: '', draggable: 'false' }) : h('span', { class: 'em', text: w.emoji });
@@ -405,10 +414,11 @@
     var pinned = !!S.pins[e.key];
     var tag = e.kind === 'reply' ? t('reply') : (e.kind === 'scout' ? t('scoutVerified') : null);
     var txt = e.kind === 'reply' ? e.reply : e.st.text;
-    var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key }, [
+    var togglePin = function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); };
+    var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key, onclick: togglePin }, [
       h('div', { class: 'tx' }, [tag ? h('small', { text: tag }) : null, '« ' + loc(txt) + ' »']),
       h('button', { class: 'pinbtn' + (pinned ? ' on' : ''), 'aria-pressed': pinned ? 'true' : 'false', 'aria-label': pinned ? t('unpin') : t('pin'), text: pinned ? '★' : '☆',
-        onclick: function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); } })
+        })
     ]);
     return row;
   }
@@ -419,6 +429,7 @@
       h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [ico('loupe', 'sm') || '👁', ' ' + t('ghost')])
     ]);
     pad.appendChild(tb);
+    if (!S.scoutsUsed && !Object.keys(S.asked).length) pad.appendChild(h('p', { class: 'help', text: t('tokenHelp') }));
     if (S.scoutsUsed) {
       var sc = h('div', { class: 'card open' }, [
         h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm') || '🔭', ' ' + t('scoutCardTitle')])].concat(
@@ -439,6 +450,7 @@
       ]);
       var inner = h('div', { class: 'inner' });
       inner.appendChild(h('p', { class: 'trait', text: loc(w.trait) }));
+      if (!Object.keys(S.pins).length) inner.appendChild(h('p', { class: 'help', text: t('tapPin') }));
       ents.forEach(function (e) { inner.appendChild(stmtRow(e)); });
       var asked = !!S.asked[w.id];
       var canAsk = !asked && left.ask > 0;
@@ -538,16 +550,31 @@
   }
   function renderResult(p) {
     var L = S.level, R = S.result, sc = R.sc, pad = h('div', { class: 'pad gutter', id: 'result' });
-    pad.appendChild(h('h3', { text: t('resultTitle') }));
+    var anim = !R.shown; R.shown = true;
+    var kimg = Art.src('portraits.roi');
+    pad.appendChild(h('div', { class: 'kingsay' }, [
+      kimg ? h('img', { class: 'portrait md', src: kimg, alt: '' }) : null,
+      h('div', {}, [h('h3', { text: t('resultTitle') }), h('p', { text: t(sc.score >= 88 && R.stars < 3 ? 'kingSayLiar' : 'kingSay' + R.stars) })])
+    ]));
     var stars = h('div', { class: 'stars', 'aria-label': t('stars', { n: R.stars }) });
-    starImgs(R.stars, 'big').forEach(function (x) { stars.appendChild(x); });
+    starImgs(R.stars, 'big', anim).forEach(function (x) { stars.appendChild(x); });
     pad.appendChild(stars);
+    if (anim) for (var si = 0; si < R.stars; si++) (function (k) { setTimeout(function () { if (S.phase === 'result') { sfx('star'); buzz(14); } }, 600 + k * 420); })(si);
     var okCount = 0, placeTotal = L.places.length;
     sc.items.forEach(function (it) { if (it.kind === 'place' && it.verdict === 'ok') okCount++; });
-    pad.appendChild(h('div', { class: 'scoreline', id: 'scoreline', text: t('result', { s: String(sc.score).replace('.', I.lang === 'fr' ? ',' : '.'), ok: okCount, t: placeTotal }) }));
+    pad.appendChild(h('div', { class: 'scoreline', id: 'scoreline', text: t('result', { s: String(Math.round(sc.score)), ok: okCount, t: placeTotal }) }));
+    var vr = h('div', { class: 'verdicts' });
+    sc.items.forEach(function (it) {
+      var nm, vis;
+      if (it.kind === 'place') { var pl0 = placeById(it.id); nm = loc(pl0.name); var ss = Art.src('stamps.' + pl0.type); vis = ss ? h('img', { src: ss, alt: '' }) : h('b', { text: '•' }); }
+      else { nm = loc(L.paths.filter(function (x) { return x.id === it.id; })[0].name); vis = h('b', { class: 'wave', text: '〰' }); }
+      var sym = it.err == null ? '–' : (it.verdict === 'ok' ? '✓' : (it.verdict === 'near' ? '≈' : '✗'));
+      vr.appendChild(h('div', { class: 'vchip ' + (it.err == null ? 'missing' : it.verdict), title: nm }, [vis, h('span', { class: 'vn', text: nm }), h('i', { text: sym })]));
+    });
+    pad.appendChild(vr);
     if (R.isBest) pad.appendChild(h('div', { class: 'scoreline', style: 'color:var(--brass)', text: t('newBest') }));
     if (R.noScout && R.stars >= 1) pad.appendChild(h('div', { class: 'scoreline', style: 'font-size:.9em;color:var(--muted)', text: '🔭✗ ' + t('noScoutBadge') }));
-    if (sc.score >= 95 && R.stars < 3) pad.appendChild(h('p', { class: 'help', text: t('thirdStarNeed') }));
+    if (sc.score >= 88 && R.stars < 3) pad.appendChild(h('p', { class: 'help', text: t('thirdStarNeed') }));
 
     if (L.faulty.length) {
       pad.appendChild(h('h3', { text: t('liarsTitle') }));
@@ -605,7 +632,7 @@
       x.fillText(loc(S.level.title), W / 2, W + 62);
       x.fillStyle = '#d2a94b'; x.font = '44px ' + FONT;
       var st = ''; for (var i = 0; i < 3; i++) st += i < S.result.stars ? '★' : '☆';
-      x.fillText(st + '  ' + String(S.result.sc.score).replace('.', I.lang === 'fr' ? ',' : '.') + ' %', W / 2, W + 124);
+      x.fillText(st + '  ' + Math.round(S.result.sc.score) + ' %', W / 2, W + 124);
       x.fillStyle = '#a9b9b4'; x.font = '30px ' + FONT; x.fillText('Keismey Studio · ' + t('title'), W / 2, W + 176);
       var url = c.toDataURL('image/png');
       modal([
@@ -711,7 +738,7 @@
   function statusColor(s) { return s === 'ok' ? COL.ok : (s === 'ko' ? COL.ko : 'rgba(70,55,35,.55)'); }
 
   /* Tampon : sprite illustré, ombre, point d'ancrage exact (le centre du sprite) */
-  var animating = false;
+  var animating = false, lastBadge = null;
   function popScale(id) {
     var t0 = S.pop && S.pop[id]; if (!t0) return 1;
     var k = (performance.now() - t0) / 420;
@@ -738,7 +765,14 @@
       c.stroke(); c.setLineDash([]);
       Art.glyph(c, pl.type, x, y + R * .04, R * .68, '#cdb98c');
     }
-    if (o.selected) { c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R * 1.45, 0, 6.3); c.stroke(); }
+    if (o.selected) {
+      c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R * 1.45, 0, 6.3); c.stroke();
+      if (o.badge) {
+        var bx = x + R * 1.55, by = y - R * 1.55, br = Math.max(11, R * .55); lastBadge = { x: bx, y: by, r: br };
+        c.fillStyle = '#b8402a'; c.strokeStyle = '#f4ead0'; c.lineWidth = 2; c.beginPath(); c.arc(bx, by, br, 0, 6.3); c.fill(); c.stroke();
+        c.strokeStyle = '#fff'; c.lineWidth = Math.max(2, br * .2); c.beginPath(); c.moveTo(bx - br * .38, by - br * .38); c.lineTo(bx + br * .38, by + br * .38); c.moveTo(bx + br * .38, by - br * .38); c.lineTo(bx - br * .38, by + br * .38); c.stroke();
+      }
+    }
     c.restore();
     if (o.q) o.q.push({ x: x, y: y, R: R, pl: pl, ghost: o.ghost, alpha: o.alpha == null ? 1 : o.alpha });
   }
@@ -829,6 +863,7 @@
 
   function paint(c, W, H, V, o) {
     var L = S.level; if (!L) return;
+    lastBadge = null;
     var u = o.u || 1, sc = V.s0 * V.z;
     function X(wx) { return V.ox + wx * sc; } function Y(wy) { return V.oy + (100 - wy) * sc; }
     function P(p) { return { x: X(p.x), y: Y(p.y) }; }
@@ -865,11 +900,19 @@
     function drawRiver(pts, alpha, dashed, tint) {
       var sp = pts.map(P); c.save(); c.globalAlpha = alpha; c.lineJoin = 'round'; c.lineCap = 'round';
       if (dashed) { c.strokeStyle = '#b5851c'; c.lineWidth = Math.max(4 * u, 1.3 * sc); c.setLineDash([9 * u, 7 * u]); Art.smooth(c, sp); c.stroke(); }
-      else { c.strokeStyle = tint ? '#2c5675' : '#2c5675'; c.lineWidth = Math.max(5 * u, 1.9 * sc); Art.smooth(c, sp); c.stroke(); c.strokeStyle = '#78acce'; c.lineWidth = Math.max(2.6 * u, .95 * sc); Art.smooth(c, sp); c.stroke(); }
+      else {
+        c.strokeStyle = 'rgba(52,100,140,.28)'; c.lineWidth = Math.max(11 * u, 3.9 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#3f7aa6'; c.lineWidth = Math.max(5.6 * u, 2 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#a7d2e8'; c.lineWidth = Math.max(2.4 * u, .8 * sc); Art.smooth(c, sp); c.stroke();
+      }
       c.restore();
     }
     function pathLabel(pa, pts) {
-      var mid = pts[Math.floor(pts.length / 2)], pp = P(mid); c.save(); c.font = 'italic ' + Math.max(11, 3.6 * sc * .8) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
+      var spts = [], si2, stamps = L.places.filter(function (q) { return S.placed[q.id]; }).map(function (q) { return P(S.placed[q.id]); });
+      for (si2 = 0; si2 < pts.length - 1; si2++) for (var tt = 0; tt < 4; tt++) spts.push({ x: pts[si2].x + (pts[si2 + 1].x - pts[si2].x) * tt / 4, y: pts[si2].y + (pts[si2 + 1].y - pts[si2].y) * tt / 4 });
+      var mid = spts[Math.floor(spts.length / 2)] || pts[0], bestD = -1;
+      spts.forEach(function (q, qi) { if (qi < 1 || qi > spts.length - 3) return; var qs = P(q), m = 1e9; stamps.forEach(function (s2) { m = Math.min(m, Math.hypot(s2.x - qs.x, s2.y - qs.y)); }); if (m > bestD) { bestD = m; mid = q; } });
+      var pp = P(mid); c.save(); c.font = 'italic ' + Math.max(11, 3.6 * sc * .8) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
       c.lineWidth = 4 * u; c.strokeStyle = 'rgba(238,226,190,.9)'; c.strokeText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.fillStyle = '#244a66'; c.fillText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.restore();
     }
     var R = o.result;
@@ -901,7 +944,7 @@
           c.save(); c.strokeStyle = it.verdict === 'ok' ? COL.ok : (it.verdict === 'near' ? COL.near : COL.ko); c.lineWidth = 2.5 * u; c.setLineDash([4 * u, 4 * u]);
           c.beginPath(); c.moveTo(ap.x, ap.y); c.lineTo(tp.x, tp.y); c.stroke(); c.restore();
           stamp(c, tp.x, tp.y, pl, { R: Rr, ghost: true, alpha: .8, q: Q });
-          stamp(c, ap.x, ap.y, pl, { R: Rr, alpha: .95, q: Q });
+          stamp(c, ap.x, ap.y, pl, { R: Rr, alpha: .95, q: it.verdict === 'ok' ? null : Q });
           mark(c, ap.x + Rr * .85, ap.y - Rr * .85, it.verdict, u * 1.1);
         } else { stamp(c, tp.x, tp.y, pl, { R: Rr, ghost: true, alpha: .8, q: Q }); mark(c, tp.x + Rr * .85, tp.y - Rr * .85, 'ko', u * 1.1); }
       });
@@ -910,7 +953,7 @@
         if (S.selected === pl.id) return; var pp = S.placed[pl.id]; if (!pp) return; var s = P(pp);
         stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: popScale(pl.id) });
       });
-      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q, pop: popScale(S.selected) }); }
+      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q, pop: popScale(S.selected), badge: !!o.interactive && S.phase === 'play' && !(G && G.type === 'stamp' && G.moved) }); }
     }
 
     layoutLabels(c, Q, W, H);
@@ -978,6 +1021,9 @@
         var w = snapToStamp(s2w(p.x, p.y)); G = { type: 'ruler', a: w }; S.ruler = { a: w, b: w }; draw(); return;
       }
       if (S.mode === 'draw' && S.activePath) { var w2 = s2w(p.x, p.y); G = { type: 'draw', path: S.activePath, pts: [w2], raw: p }; draw(); return; }
+      if (S.selected && S.placed[S.selected] && lastBadge && Math.hypot(p.x - lastBadge.x, p.y - lastBadge.y) <= lastBadge.r + 10) {
+        snap(); delete S.placed[S.selected]; S.selected = null; sfx('low'); buzz(10); changed(); return;
+      }
       var hit = hitStamp(p);
       if (hit) {
         S.selected = hit; var cur = S.placed[hit], sp = w2s(cur);
@@ -1023,7 +1069,7 @@
       if (g.type === 'ruler') { var d = Core.dist(S.ruler.a, S.ruler.b); if (d < 1) S.ruler = null; else S.rulerUsed = true; draw(); tutCheck(); }
       else if (g.type === 'draw') {
         var pts = g.pts, len = 0; for (var i = 1; i < pts.length; i++) len += Core.dist(pts[i - 1], pts[i]);
-        if (pts.length >= 2 && len > 6) { snap(); S.drawn[g.path] = Core.simplify(pts, .7); sfx('draw'); buzz(8); changed(); } else draw();
+        if (pts.length >= 2 && len > 6) { snap(); S.drawn[g.path] = Core.simplify(pts, .7); S.mode = 'move'; S.activePath = null; sfx('draw'); buzz(8); changed(); renderHint(); } else draw();
       }
       else if (g.type === 'stamp') {
         if (g.moved) {

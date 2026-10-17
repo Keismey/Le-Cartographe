@@ -4,8 +4,8 @@
   var D = {
     fr: {
       title: 'Le Cartographe',
-      tagline: 'Dessine le monde, un témoignage à la fois.',
-      version: 'V0 · test',
+      tagline: 'Dessinez le monde, un témoignage à la fois.',
+      version: 'V0.3 · version test',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -21,7 +21,7 @@
       orlanNotes: 'Notes d’Orlan', orlanNote: 'Note d’Orlan n°{n}', noNotes: 'Aucune note retrouvée pour l’instant.',
 
       move: 'Déplacer', draw: 'Tracer', drawPath: 'Tracer : {name}', undo: 'Annuler', removeStamp: 'Retirer',
-      recenter: 'Recentrer', eraseStroke: 'Gommer le tracé', pin: 'Surligner', unpin: 'Ne plus surligner',
+      recenter: 'Recentrer', eraseStroke: 'Gommer le tracé', pin: 'Épingler sur la carte', unpin: 'Retirer de la carte',
       stampsTitle: 'Tampons', stampsHelp: 'Glissez un tampon sur le parchemin. Relâchez-le hors de la carte pour le reprendre.',
       pathsTitle: 'Tracés', pathsHelp: 'Choisissez un tracé, puis dessinez au doigt. Un nouveau trait remplace l’ancien.',
       placed: 'posé', notPlaced: 'à poser', drawn: 'tracé', notDrawn: 'à tracer',
@@ -38,6 +38,14 @@
 
       missing: 'Il manque {n} élément(s) sur la carte. Le roi sera moins exigeant sur ce qui manque, mais ce sera compté en erreur.',
       completeSure: 'Tout est en place.',
+      kingSay0: '« Ceci n’est pas une carte, c’est un gribouillis. Reprenez la plume, et relisez vos témoins. »',
+      kingSay1: '« Passable. On s’y retrouve à peu près, mais je m’y perdrais encore. »',
+      kingSay2: '« Belle ouvrage ! Quelques erreurs subsistent, mais mes meuniers s’y retrouveront. »',
+      kingSayLiar: '« Une carte presque parfaite… mais quelqu’un vous a menti sans que vous le remarquiez. Relisez vos témoins. »',
+      kingSay3: '« Remarquable ! Vous avez même démasqué les faux témoins. Orlan n’aurait pas fait mieux. »',
+      tokenHelp: 'Question : un témoin précise ou corrige l’un de ses dires. Éclaireur : révèle un fait certain. Les jetons sont comptés.',
+      tapPin: 'Touchez un indice pour l’épingler sur la carte.',
+      removeBadge: 'Retirer ce tampon',
       resultTitle: 'Verdict du roi', detail: 'Détail', detailShow: 'Voir le détail', detailHide: 'Masquer le détail',
       vOk: 'juste', vNear: 'approché', vKo: 'raté', vMissing: 'absent', gap: 'écart : {d} j',
       liarsTitle: 'Qui se trompait', unmasked: 'Démasqué', unnoticed: 'Passé inaperçu',
@@ -71,7 +79,7 @@
     en: {
       title: 'The Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'V0 · test',
+      version: 'V0.3 · test version',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
@@ -87,7 +95,7 @@
       orlanNotes: 'Orlan’s notes', orlanNote: 'Orlan’s note no. {n}', noNotes: 'No notes found yet.',
 
       move: 'Move', draw: 'Draw', drawPath: 'Draw: {name}', undo: 'Undo', removeStamp: 'Remove',
-      recenter: 'Recenter', eraseStroke: 'Erase stroke', pin: 'Highlight', unpin: 'Stop highlighting',
+      recenter: 'Recenter', eraseStroke: 'Erase stroke', pin: 'Pin to the map', unpin: 'Unpin from the map',
       stampsTitle: 'Stamps', stampsHelp: 'Drag a stamp onto the parchment. Release it off the map to take it back.',
       pathsTitle: 'Strokes', pathsHelp: 'Pick a stroke, then draw with your finger. A new stroke replaces the old one.',
       placed: 'placed', notPlaced: 'to place', drawn: 'drawn', notDrawn: 'to draw',
@@ -104,6 +112,14 @@
 
       missing: '{n} element(s) are missing from the map. They will count as errors.',
       completeSure: 'Everything is in place.',
+      kingSay0: '"This is no map, it is a scribble. Take up your pen again, and reread your witnesses."',
+      kingSay1: '"Passable. One can find one’s way, more or less, but I would still get lost."',
+      kingSay2: '"Fine work! A few errors remain, but my millers will find their way."',
+      kingSayLiar: '"An almost perfect map… but someone lied to you and you never noticed. Reread your witnesses."',
+      kingSay3: '"Remarkable! You even unmasked the false witnesses. Orlan could not have done better."',
+      tokenHelp: 'Question: a witness clarifies or corrects one of their statements. Scout: reveals a certain fact. Tokens are limited.',
+      tapPin: 'Tap a clue to pin it on the map.',
+      removeBadge: 'Remove this stamp',
       resultTitle: 'The king’s verdict', detail: 'Details', detailShow: 'Show details', detailHide: 'Hide details',
       vOk: 'correct', vNear: 'close', vKo: 'missed', vMissing: 'missing', gap: 'off by {d} d',
       liarsTitle: 'Who was wrong', unmasked: 'Unmasked', unnoticed: 'Went unnoticed',
