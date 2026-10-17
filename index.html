@@ -1,0 +1,2043 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#15242c"><title>Le Cartographe</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap"><style>/* Le Cartographe — mise en page : chrome encre de nuit, parchemin sur la carte */
+:root {
+  --night: #15242c;
+  --night-2: #1e323b;
+  --night-3: #2a434e;
+  --line: #3b5864;
+  --paper: #eadfc0;
+  --paper-2: #d8c698;
+  --paper-ink: #3a2c1c;
+  --text: #efe6cf;
+  --muted: #a9b9b4;
+  --brass: #d2a94b;
+  --seal: #b8402a;
+  --seal-2: #d4573d;
+  --river: #3f7194;
+  --ok: #3f8a52;
+  --ko: #c4382c;
+  --near: #c58a1d;
+  --font-display: 'IM Fell English', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Alegreya Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --fs: 1;
+  color-scheme: dark;
+}
+:root[data-cb="1"] { --ok: #2a79c4; --ko: #e08a2c; --near: #8d6cc0; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--night); color: var(--text);
+  font-family: var(--font-ui); font-size: calc(17px * var(--fs)); line-height: 1.35;
+  overflow: hidden; overscroll-behavior: none; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
+button { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; }
+:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+
+#app { position: relative; height: 100%; width: 100%; overflow: hidden; }
+.screen { position: absolute; inset: 0; display: none; }
+.screen.on { display: flex; flex-direction: column; }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* ---------- boutons ---------- */
+.btn {
+  min-height: 48px; padding: 10px 20px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--night-2); cursor: pointer; font-weight: 700; letter-spacing: .02em;
+}
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--seal); border-color: var(--seal-2); color: #fff6ea; }
+.btn.brass { background: var(--brass); border-color: #e7c874; color: #2a1f08; }
+.btn.ghost { background: transparent; }
+.btn[disabled] { opacity: .45; cursor: default; }
+a.btn { color: var(--text); }
+.btn.small { min-height: 44px; padding: 6px 12px; font-size: .92em; }
+.linkbtn { background: none; border: 0; color: var(--brass); text-decoration: underline; padding: 10px 4px; min-height: 44px; cursor: pointer; }
+
+/* ---------- écran titre ---------- */
+#title { align-items: center; justify-content: center; text-align: center; gap: 18px;
+  background:
+    radial-gradient(ellipse at 50% 38%, #2c4854 0%, transparent 62%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
+    var(--night); }
+#title .rose { width: 108px; height: 108px; opacity: .9; }
+#title h1 { font-size: clamp(2.2rem, 11vw, 3.6rem); letter-spacing: .02em; color: var(--paper); }
+#title p.tag { margin: 0; max-width: 22ch; color: var(--muted); font-size: 1.08em; }
+#title .stack { display: flex; flex-direction: column; gap: 10px; width: min(300px, 100%); margin-top: 8px; }
+#title .ver { position: absolute; bottom: max(10px, env(safe-area-inset-bottom, 0px)); color: var(--muted); font-size: .8em; opacity: .7; }
+
+/* ---------- barre haute commune ---------- */
+.topbar { display: flex; align-items: center; gap: 8px; min-height: 52px; padding-block: 4px; background: var(--night-2); border-bottom: 1px solid var(--line); }
+.topbar h2 { flex: 1; min-width: 0; font-size: 1.15em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--paper); }
+.iconbtn { width: 44px; height: 44px; display: grid; place-items: center; background: none; border: 0; border-radius: 6px; cursor: pointer; font-size: 1.25em; }
+.iconbtn:active { background: var(--night-3); }
+.scroll { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* ---------- atlas ---------- */
+#atlas .body { flex: 1; padding-block: 14px 24px; display: flex; flex-direction: column; gap: 12px; }
+.lead { margin: 0; color: var(--muted); }
+.region { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--night-2); text-align: left; width: 100%; cursor: pointer; min-height: 72px; }
+.region[disabled] { opacity: .5; cursor: default; }
+.region .thumb { width: 64px; height: 64px; border-radius: 4px; background: var(--paper-2); border: 1px solid var(--line); flex: none; object-fit: cover; display: grid; place-items: center; color: var(--paper-ink); font-family: var(--font-display); font-size: 1.6em; }
+.region .meta { flex: 1; min-width: 0; }
+.region .nm { font-family: var(--font-display); font-size: 1.12em; color: var(--paper); }
+.region .sub { color: var(--muted); font-size: .88em; }
+.starsrow { letter-spacing: .12em; color: var(--brass); font-size: 1.05em; white-space: nowrap; }
+.starsrow .off { color: var(--night-3); }
+.notes { display: flex; flex-direction: column; gap: 8px; }
+.note { padding: 10px 12px; border-left: 3px solid var(--brass); background: var(--night-2); font-family: var(--font-display); font-style: italic; color: var(--paper); }
+.note small { display: block; font-family: var(--font-ui); font-style: normal; color: var(--muted); }
+h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
+
+/* ---------- briefing ---------- */
+#briefing { justify-content: center; align-items: center; padding-block: 20px; background: radial-gradient(ellipse at 50% 20%, #2c4854, var(--night) 70%); }
+#briefing .scroll-card { width: min(520px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 14px; }
+#briefing .parch { background: var(--paper); color: var(--paper-ink); border-radius: 4px; padding: 20px 20px 18px; box-shadow: 0 10px 28px rgba(0,0,0,.45); white-space: pre-line; font-family: var(--font-display); font-size: calc(1.2rem * var(--fs)); line-height: 1.45; }
+#briefing .parch .rg { font-family: var(--font-ui); font-size: .74em; letter-spacing: .14em; text-transform: uppercase; color: #7a6342; display: block; margin-bottom: 6px; }
+#briefing .parch h2 { font-size: 1.7rem; margin-bottom: 10px; }
+#briefing .hint { border-top: 1px dashed #a38a59; margin-top: 12px; padding-top: 10px; font-size: .86em; font-style: italic; color: #5b4730; }
+
+/* ---------- jeu ---------- */
+#game.on { display: grid; }
+#game { height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "top" "tut" "map" "panel" "bar"; }
+#game .topbar { grid-area: top; }
+#mapwrap { grid-area: map; position: relative; width: 100%; aspect-ratio: 1 / 1; max-height: 47vh; background: #2a2118; touch-action: none; overflow: hidden; }
+#map { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#panel { grid-area: panel; min-height: 0; background: var(--night); border-top: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain; }
+#bar { grid-area: bar; display: flex; gap: 8px; align-items: stretch; padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); background: var(--night-2); border-top: 1px solid var(--line); }
+#bar .btn { flex: 1; min-height: 52px; }
+#bar .btn.active { background: var(--night-3); border-color: var(--brass); color: var(--paper); }
+#bar .btn.seal { flex: 1.35; }
+.mapfloat { position: absolute; display: flex; gap: 6px; }
+.mapfloat.tr { top: 8px; right: 8px; }
+.mapfloat.bl { bottom: 8px; left: 8px; }
+.mapfloat button { min-width: 44px; min-height: 44px; border-radius: 22px; background: rgba(21,36,44,.82); border: 1px solid var(--line); color: var(--text); cursor: pointer; padding: 0 12px; font-weight: 700; }
+.mapfloat button.on { border-color: var(--brass); color: var(--brass); }
+.maphint { position: absolute; left: 8px; right: 60px; bottom: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(21,36,44,.88); color: var(--text); font-size: .86em; pointer-events: none; }
+
+@media (min-aspect-ratio: 5/4) and (min-width: 700px) {
+  #game.on { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "top top" "tut tut" "map panel" "map bar"; }
+  #mapwrap { aspect-ratio: auto; max-height: none; height: 100%; }
+}
+
+/* panneau Outils */
+.pad { padding-block: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.pad h3 { font-size: 1em; color: var(--brass); letter-spacing: .04em; }
+.help { margin: 0; color: var(--muted); font-size: .88em; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 82px; min-height: 76px; padding: 6px 4px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--paper-ink); cursor: grab; touch-action: none; position: relative; }
+.chip canvas { width: 38px; height: 38px; pointer-events: none; }
+.chip span { font-size: .72em; line-height: 1.1; text-align: center; pointer-events: none; font-weight: 700; }
+.chip.done { background: var(--night-2); color: var(--muted); border-style: dashed; }
+.chip.done canvas { opacity: .45; }
+.chip.armed { outline: 3px solid var(--brass); }
+.chip .ck { position: absolute; top: 2px; right: 4px; font-size: .8em; color: var(--ok); }
+.tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.tool { min-height: 56px; padding: 6px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--night-2); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: .84em; text-align: center; }
+.tool b { font-size: 1.35em; font-weight: 400; line-height: 1; }
+.tool.on { border-color: var(--brass); background: var(--night-3); color: var(--paper); }
+.tool[disabled] { opacity: .4; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .84em; color: var(--muted); }
+
+/* carnet */
+.card { border: 1px solid var(--line); border-radius: 8px; background: var(--night-2); overflow: hidden; }
+.card > header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 56px; cursor: pointer; width: 100%; background: none; border: 0; text-align: left; }
+.card .em { font-size: 1.7em; width: 40px; text-align: center; flex: none; }
+.card .who { flex: 1; min-width: 0; }
+.card .who b { font-family: var(--font-display); font-weight: 400; font-size: 1.1em; color: var(--paper); display: block; }
+.card .who i { color: var(--muted); font-size: .86em; font-style: normal; }
+.card .chev { color: var(--muted); transition: transform .15s; }
+.card.open .chev { transform: rotate(90deg); }
+.card .inner { display: none; padding: 0 12px 12px; flex-direction: column; gap: 8px; }
+.card.open .inner { display: flex; }
+.trait { margin: 0; color: var(--muted); font-size: .88em; font-style: italic; }
+.stmt { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 6px; background: var(--night); border: 1px solid transparent; }
+.stmt.pinned { border-color: var(--brass); background: #2a2b24; }
+.stmt .tx { flex: 1; min-width: 0; font-family: var(--font-display); font-size: 1.04em; color: var(--paper); line-height: 1.3; }
+.stmt .tx small { display: block; font-family: var(--font-ui); font-size: .74em; letter-spacing: .08em; text-transform: uppercase; color: var(--brass); margin-bottom: 2px; }
+.pinbtn { flex: none; width: 44px; height: 44px; margin: -8px -8px -8px 0; background: none; border: 0; cursor: pointer; font-size: 1.15em; color: var(--muted); border-radius: 6px; }
+.pinbtn.on { color: var(--brass); }
+.badge { flex: none; align-self: center; min-width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: 13px; font-weight: 800; font-size: .86em; color: #fff; }
+.badge.ok { background: var(--ok); }
+.badge.ko { background: var(--ko); border-radius: 4px; transform: rotate(45deg); }
+.badge.ko i { transform: rotate(-45deg); font-style: normal; }
+.badge.na { background: var(--night-3); color: var(--muted); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; color: var(--text); }
+.check input { width: 24px; height: 24px; accent-color: var(--seal); }
+.tokenbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* bulle de tutoriel */
+#tut { grid-area: tut; padding-top: 8px; padding-bottom: 8px; background: var(--paper); color: var(--paper-ink); border-bottom: 2px solid #b09a6a; display: none; gap: 10px; align-items: center; }
+#tut.on { display: flex; }
+#tut .t { flex: 1; min-width: 0; font-size: .96em; }
+#tut .t small { display: block; color: #7a6342; font-size: .76em; letter-spacing: .08em; text-transform: uppercase; }
+#tut button { min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid #b09a6a; background: #f4ead0; color: var(--paper-ink); font-weight: 700; cursor: pointer; }
+#tut button.skip { background: none; border-color: transparent; text-decoration: underline; padding: 0 6px; font-weight: 400; }
+
+/* résultat */
+.stars { font-size: 2.4em; letter-spacing: .16em; color: var(--brass); text-align: center; line-height: 1; }
+.stars .off { color: var(--night-3); }
+.scoreline { text-align: center; font-family: var(--font-display); font-size: 1.15em; color: var(--paper); }
+.row { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: .92em; }
+.row .nm { flex: 1; min-width: 0; }
+.row .sc { color: var(--muted); font-size: .86em; }
+.verd { font-weight: 800; }
+.verd.ok { color: var(--ok); } .verd.near { color: var(--near); } .verd.ko { color: var(--ko); }
+.liar { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--night-2); }
+.liar b { color: var(--paper); font-family: var(--font-display); font-weight: 400; }
+.orlan { padding: 12px 14px; background: var(--paper); color: var(--paper-ink); border-radius: 4px; font-family: var(--font-display); font-style: italic; font-size: 1.1em; }
+.orlan small { display: block; font-family: var(--font-ui); font-style: normal; color: #7a6342; letter-spacing: .08em; text-transform: uppercase; font-size: .68em; margin-bottom: 4px; }
+.maplegend { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 12px; padding: 5px 10px; border-radius: 6px; background: rgba(21,36,44,.88); font-size: .8em; pointer-events: none; }
+.maplegend i { display: inline-block; width: 18px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 5px; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.btnrow .btn { flex: 1 1 140px; }
+
+/* fenêtre modale + toast */
+#modal { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,14,18,.72); padding: 16px; }
+#modal.on { display: flex; }
+#modal .box { width: min(440px, 100%); max-height: 100%; overflow-y: auto; background: var(--night-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+#modal h2 { font-size: 1.3em; color: var(--paper); }
+#modal p { margin: 0; }
+#modal textarea { width: 100%; min-height: 90px; background: var(--night); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: .8em; padding: 8px; -webkit-user-select: text; user-select: text; }
+.seg { display: flex; gap: 6px; }
+.seg .btn { flex: 1; min-height: 44px; padding: 6px 8px; }
+.seg .btn.on { background: var(--night-3); border-color: var(--brass); color: var(--paper); }
+.setrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.setrow > span { flex: none; }
+#toast { position: absolute; z-index: 30; left: 50%; bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 72px)); transform: translateX(-50%); max-width: 90%; padding: 10px 16px; border-radius: 22px; background: var(--paper); color: var(--paper-ink); font-weight: 700; display: none; pointer-events: none; text-align: center; }
+#toast.on { display: block; }
+
+#dragghost { position: fixed; z-index: 50; pointer-events: none; width: 54px; height: 54px; margin: -27px 0 0 -27px; display: none; }
+#dragghost.on { display: block; }
+
+@media (max-height: 640px) and (max-aspect-ratio: 5/4) { #mapwrap { max-height: 36vh; } }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style></head><body><div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div><script>/* Le Cartographe — moteur pur (indices, évaluation, recalage, score).
+   Aucune dépendance au DOM : testable sous Node. Monde 0–100, x → est, y → nord. */
+(function (root) {
+  'use strict';
+  var DEG = 180 / Math.PI;
+  var CAPS = { N: 90, NE: 45, E: 0, SE: -45, S: -90, SW: -135, W: 180, NW: 135 };
+
+  function norm180(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+  function angDiff(a, b) { return Math.abs(norm180(a - b)); }
+  function dist(p, q) { return Math.hypot(p.x - q.x, p.y - q.y); }
+  function bearing(from, to) { return Math.atan2(to.y - from.y, to.x - from.x) * DEG; }
+
+  /* Un tracé peut être donné en [[x,y],…] ou [{x,y},…] */
+  function toPts(arr) {
+    if (!arr) return null;
+    return arr.map(function (p) { return Array.isArray(p) ? { x: p[0], y: p[1] } : { x: p.x, y: p.y }; });
+  }
+
+  function segClosest(p, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    var t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    var x = a.x + t * dx, y = a.y + t * dy;
+    return { x: x, y: y, t: t, d: Math.hypot(p.x - x, p.y - y) };
+  }
+  function polyClosest(p, poly) {
+    var best = null;
+    for (var i = 0; i < poly.length - 1; i++) {
+      var c = segClosest(p, poly[i], poly[i + 1]);
+      if (!best || c.d < best.d) { best = c; best.i = i; }
+    }
+    if (!best && poly.length === 1) best = { x: poly[0].x, y: poly[0].y, d: dist(p, poly[0]), i: 0, t: 0 };
+    return best;
+  }
+  /* côté d'un point par rapport à la polyligne : +1 gauche du sens de tracé, −1 droite */
+  function sideSign(p, poly) {
+    var c = polyClosest(p, poly);
+    var a = poly[c.i], b = poly[Math.min(c.i + 1, poly.length - 1)];
+    var cr = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+    return cr >= 0 ? 1 : -1;
+  }
+
+  function resample(poly, step) {
+    var out = [], acc = 0;
+    if (!poly || !poly.length) return out;
+    out.push({ x: poly[0].x, y: poly[0].y });
+    for (var i = 0; i < poly.length - 1; i++) {
+      var a = poly[i], b = poly[i + 1], L = dist(a, b);
+      if (L === 0) continue;
+      var pos = step - acc;
+      while (pos <= L) {
+        out.push({ x: a.x + (b.x - a.x) * pos / L, y: a.y + (b.y - a.y) * pos / L });
+        pos += step;
+      }
+      acc = L - (pos - step);
+    }
+    out.push({ x: poly[poly.length - 1].x, y: poly[poly.length - 1].y });
+    return out;
+  }
+  function meanDistToPoly(pts, poly) {
+    var s = 0;
+    for (var i = 0; i < pts.length; i++) s += polyClosest(pts[i], poly).d;
+    return s / pts.length;
+  }
+  /* distance de Chamfer symétrique entre deux polylignes */
+  function chamfer(A, B) {
+    if (!A || A.length < 2 || !B || B.length < 2) return Infinity;
+    var a = resample(A, 2), b = resample(B, 2);
+    return 0.5 * (meanDistToPoly(a, B) + meanDistToPoly(b, A));
+  }
+
+  /* Douglas-Peucker */
+  function simplify(pts, tol) {
+    if (pts.length < 3) return pts.slice();
+    var keep = new Array(pts.length); keep[0] = keep[pts.length - 1] = true;
+    (function rec(i0, i1) {
+      var a = pts[i0], b = pts[i1], dmax = 0, idx = -1;
+      for (var i = i0 + 1; i < i1; i++) {
+        var d = segClosest(pts[i], a, b).d;
+        if (d > dmax) { dmax = d; idx = i; }
+      }
+      if (dmax > tol && idx > 0) { keep[idx] = true; rec(i0, idx); rec(idx, i1); }
+    })(0, pts.length - 1);
+    return pts.filter(function (_, i) { return keep[i]; });
+  }
+
+  /* ---------- Évaluation des indices ---------- */
+  function idsOf(v) { return Array.isArray(v) ? v : [v]; }
+
+  /* Identifiants (lieux / tracés) nécessaires pour évaluer un indice */
+  function needs(st) {
+    var pl = [], pa = [];
+    function addP(v) { if (v != null) idsOf(v).forEach(function (x) { pl.push(x); }); }
+    switch (st.k) {
+      case 'rel': addP(st.a); addP(st.b); break;
+      case 'between': addP(st.a); addP(st.b); addP(st.c); break;
+      case 'cross': addP(st.a); pa.push(st.path); break;
+      case 'side': addP(st.a); pa.push(st.path); break;
+      case 'opp': addP(st.a); addP(st.b); pa.push(st.path); break;
+      case 'order': (st.list || []).forEach(function (x) { pl.push(x); }); break;
+    }
+    return { places: pl, paths: pa };
+  }
+
+  /* ctx : { pos(id)->{x,y}|null, path(id)->pts|null, scale, nearR, angTol, witness }
+     retour : { status:'ok'|'ko'|'na', cost:number, detail:{…} } */
+  function evalStatement(st, ctx) {
+    var nd = needs(st), i;
+    for (i = 0; i < nd.places.length; i++) if (!ctx.pos(nd.places[i])) return { status: 'na', cost: 0 };
+    for (i = 0; i < nd.paths.length; i++) { var pp = ctx.path(nd.paths[i]); if (!pp || pp.length < 2) return { status: 'na', cost: 0 }; }
+    var cost = 0, detail = {};
+    var scale = ctx.scale || 20;
+    var wit = ctx.witness || {};
+    var bias = st.exact ? 1 : ((wit.bias && wit.bias.dist) || 1);
+    var angTol = st.angTol || ctx.angTol || 35;
+
+    function viol(v) { if (v > 0) cost += v; }
+
+    if (st.k === 'rel') {
+      var A = ctx.pos(st.a), B = ctx.pos(st.b);
+      if (st.cap) {
+        var br = bearing(B, A), ad = angDiff(br, CAPS[st.cap]);
+        detail.bearing = br; detail.angDiff = ad;
+        viol((ad - angTol) / angTol);
+      }
+      if (st.j != null) {
+        var d = dist(A, B) / scale, claimed = st.j / bias;
+        var tol = st.tolRel || (st.approx ? 0.3 : 0.25);
+        detail.days = d; detail.claimed = claimed;
+        if (st.jmin) viol((claimed * 0.9 - d) / claimed);
+        else viol((Math.abs(d - claimed) - tol * claimed) / claimed);
+      }
+      if (st.near) {
+        var r = st.r || ctx.nearR || 18, dd = dist(A, B);
+        detail.d = dd; viol((dd - r) / r);
+      }
+    } else if (st.k === 'between') {
+      var a = ctx.pos(st.a), b = ctx.pos(st.b), c = ctx.pos(st.c);
+      var cl = segClosest(a, b, c);
+      viol((cl.d - 8) / 8);
+      if (cl.t < 0.05 || cl.t > 0.95) viol(0.5);
+    } else if (st.k === 'cross') {
+      var poly = ctx.path(st.path), rr = st.r || 6;
+      idsOf(st.a).forEach(function (id) { var dd2 = polyClosest(ctx.pos(id), poly).d; viol((dd2 - rr) / rr); });
+    } else if (st.k === 'side') {
+      var poly2 = ctx.path(st.path), P = ctx.pos(st.a), q = polyClosest(P, poly2);
+      if (q.d >= 3) { var adj = angDiff(bearing(q, P), CAPS[st.cap]); viol((adj - 60) / 60); }
+    } else if (st.k === 'opp') {
+      var poly3 = ctx.path(st.path);
+      if (sideSign(ctx.pos(st.a), poly3) === sideSign(ctx.pos(st.b), poly3)) cost += 1;
+    } else if (st.k === 'order') {
+      var ang = CAPS[st.axis] / DEG, ux = Math.cos(ang), uy = Math.sin(ang), prev = -Infinity;
+      st.list.forEach(function (id) { var p = ctx.pos(id), pr = p.x * ux + p.y * uy; if (pr < prev) cost += 1; prev = pr; });
+    }
+    return { status: cost <= 1e-9 ? 'ok' : 'ko', cost: cost, detail: detail };
+  }
+
+  /* ---------- Recalage + score ---------- */
+  /* Translation + échelle (bornée) minimisant l'erreur quadratique player→vérité */
+  function align(pairs, smin, smax) {
+    smin = smin || 0.8; smax = smax || 1.2;
+    if (!pairs.length) return { s: 1, tx: 0, ty: 0 };
+    var n = pairs.length, pcx = 0, pcy = 0, qcx = 0, qcy = 0, i;
+    for (i = 0; i < n; i++) { pcx += pairs[i][0].x; pcy += pairs[i][0].y; qcx += pairs[i][1].x; qcy += pairs[i][1].y; }
+    pcx /= n; pcy /= n; qcx /= n; qcy /= n;
+    var num = 0, den = 0;
+    for (i = 0; i < n; i++) {
+      var px = pairs[i][0].x - pcx, py = pairs[i][0].y - pcy, qx = pairs[i][1].x - qcx, qy = pairs[i][1].y - qcy;
+      num += px * qx + py * qy; den += px * px + py * py;
+    }
+    var s = den > 1e-9 ? num / den : 1;
+    s = Math.max(smin, Math.min(smax, s));
+    return { s: s, tx: qcx - s * pcx, ty: qcy - s * pcy };
+  }
+  function applyAlign(al, p) { return { x: al.s * p.x + al.tx, y: al.s * p.y + al.ty }; }
+
+  /* level : { places:[{id,truth:[x,y]}], paths:[{id,truth:[[x,y]…]}], tol:{ok,near} }
+     placed : { id:{x,y} } ; drawn : { id:[{x,y}…] } */
+  function score(level, placed, drawn) {
+    var tol = level.tol || { ok: 12, near: 20 };
+    var ptol = level.ptol || { ok: 6, near: 10 };
+    var pairs = [];
+    level.places.forEach(function (pl) { if (placed[pl.id]) pairs.push([placed[pl.id], { x: pl.truth[0], y: pl.truth[1] }]); });
+    var al = align(pairs, 0.8, 1.2);
+    var items = [], ok = 0, near = 0;
+    level.places.forEach(function (pl) {
+      var it = { id: pl.id, kind: 'place', err: null, verdict: 'ko' };
+      if (placed[pl.id]) {
+        var q = applyAlign(al, placed[pl.id]);
+        it.err = dist(q, { x: pl.truth[0], y: pl.truth[1] });
+        it.at = q;
+        if (it.err < tol.ok) { it.verdict = 'ok'; ok++; } else if (it.err < tol.near) { it.verdict = 'near'; near++; }
+      }
+      items.push(it);
+    });
+    (level.paths || []).forEach(function (pa) {
+      var it = { id: pa.id, kind: 'path', err: null, verdict: 'ko' };
+      var pts = drawn[pa.id];
+      if (pts && pts.length >= 2) {
+        var moved = pts.map(function (p) { return applyAlign(al, p); });
+        it.err = chamfer(moved, toPts(pa.truth));
+        it.at = moved;
+        if (it.err < ptol.ok) { it.verdict = 'ok'; ok++; } else if (it.err < ptol.near) { it.verdict = 'near'; near++; }
+      }
+      items.push(it);
+    });
+    var total = items.length;
+    var pct = total ? Math.round(100 * (ok + 0.5 * near) / total * 10) / 10 : 0;
+    return { score: pct, ok: ok, near: near, total: total, items: items, align: al };
+  }
+
+  /* étoiles : 1 ≥ 60, 2 ≥ 80, 3 ≥ 95 ET menteurs/fautifs soupçonnés */
+  function stars(pct, level, suspects) {
+    var s = 0;
+    if (pct >= 60) s = 1;
+    if (pct >= 80) s = 2;
+    if (pct >= 95) {
+      var need = (level.faulty || []);
+      var allSus = need.every(function (id) { return suspects && suspects[id]; });
+      s = allSus ? 3 : 2;
+    }
+    return s;
+  }
+
+  var Core = {
+    CAPS: CAPS, angDiff: angDiff, dist: dist, bearing: bearing, toPts: toPts,
+    polyClosest: polyClosest, sideSign: sideSign, resample: resample, chamfer: chamfer,
+    simplify: simplify, needs: needs, evalStatement: evalStatement,
+    align: align, applyAlign: applyAlign, score: score, stars: stars
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Core;
+  else root.Core = Core;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+;
+/* Le Cartographe — données des contrées (V0 : contrées 1 et 2).
+   Repère : x → est, y → nord, carte 0–100. 1 journée = scale unités. */
+(function (root) {
+  'use strict';
+
+  var LEVELS = [
+
+    /* ───────────── 1 · La Vallée des Trois Meuniers (tuto) ───────────── */
+    {
+      id: 1,
+      title: { fr: 'La Vallée des Trois Meuniers', en: 'The Valley of the Three Millers' },
+      scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 2, scout: 1 },
+      king: {
+        fr: 'Orlan est parti sans prévenir. Vous reprenez ses cartes. Et ses secrets, peut-être.\n\n« Trois moulins nourrissent ma capitale. Où sont-ils ? »',
+        en: 'Orlan left without a word. You take over his maps. And his secrets, perhaps.\n\n"Three mills feed my capital. Where are they?"'
+      },
+      hint: {
+        fr: 'La Rivière Menue descend des collines du nord-ouest vers le sud-est, en passant par les trois moulins.',
+        en: 'The Menue River flows from the northwest hills to the southeast, past all three mills.'
+      },
+      places: [
+        { id: 'moulin_haut',   type: 'moulin',  name: { fr: 'Moulin Haut',         en: 'Upper Mill' },   truth: [20, 75] },
+        { id: 'moulin_milieu', type: 'moulin',  name: { fr: 'Moulin Milieu',       en: 'Middle Mill' },  truth: [45, 55] },
+        { id: 'moulin_bas',    type: 'moulin',  name: { fr: 'Moulin Bas',          en: 'Lower Mill' },   truth: [72, 38] },
+        { id: 'pont',          type: 'pont',    name: { fr: 'Pont du Gué',         en: 'Ford Bridge' },  truth: [46, 45] },
+        { id: 'auberge',       type: 'auberge', name: { fr: 'Auberge du Meunier',  en: "Miller's Inn" }, truth: [70, 70] }
+      ],
+      paths: [
+        { id: 'riviere', type: 'river', name: { fr: 'Rivière Menue', en: 'Menue River' },
+          truth: [[5, 85], [20, 75], [45, 55], [46, 45], [60, 40], [72, 38], [95, 25]] }
+      ],
+      witnesses: [
+        {
+          id: 'odo', emoji: '👨‍🌾', name: { fr: 'Maître Odo', en: 'Master Odo' }, job: { fr: 'Meunier', en: 'Miller' },
+          trait: { fr: 'Connaît sa vallée comme sa poche. Fiable.', en: 'Knows his valley like the back of his hand. Reliable.' },
+          statements: [
+            { k: 'rel', a: 'moulin_haut', b: 'moulin_milieu', cap: 'NW', j: 1.5,
+              text: { fr: 'Mon Moulin Haut est à un jour et demi au nord-ouest du Milieu.', en: 'My Upper Mill is a day and a half northwest of the Middle one.' } },
+            { k: 'rel', a: 'moulin_bas', b: 'moulin_milieu', cap: 'SE', j: 1.5,
+              text: { fr: 'Le Moulin Bas est au sud-est du Milieu, à un jour et demi.', en: 'The Lower Mill is southeast of the Middle one, a day and a half away.' } },
+            { k: 'cross', a: ['moulin_haut', 'moulin_milieu', 'moulin_bas'], path: 'riviere',
+              text: { fr: 'La Rivière Menue passe par mes trois moulins.', en: 'The Menue River runs past all three of my mills.' } }
+          ],
+          ask: {
+            reply: { fr: 'Le pont ? Deux journées au sud-est de mon Moulin Haut, pas moins.', en: 'The bridge? Two days southeast of my Upper Mill, no less.' },
+            st: { k: 'rel', a: 'pont', b: 'moulin_haut', cap: 'SE', j: 2,
+              text: { fr: 'Le pont est à deux journées au sud-est du Moulin Haut.', en: 'The bridge is two days southeast of the Upper Mill.' } }
+          }
+        },
+        {
+          id: 'bartolo', emoji: '🧔', name: { fr: 'Bartolo', en: 'Bartolo' }, job: { fr: 'Marchand', en: 'Merchant' },
+          bias: { dist: 1.3 },
+          trait: { fr: 'Exagère les distances (environ +30 %). Fiable sur les routes.', en: 'Exaggerates distances (about +30%). Reliable on roads.' },
+          statements: [
+            { k: 'rel', a: 'moulin_bas', b: 'moulin_milieu', j: 2,
+              text: { fr: 'Du Milieu au Bas, deux bonnes journées !', en: 'From the Middle Mill to the Lower one, two good days!' } },
+            { k: 'rel', a: 'auberge', b: 'moulin_milieu', cap: 'NE',
+              text: { fr: "Pour aller à l'auberge, depuis le Milieu, on monte vers le nord-est.", en: 'To reach the inn from the Middle Mill, you head northeast.' } }
+          ],
+          ask: {
+            reply: { fr: "Bon, bon… une journée et demie jusqu'à l'auberge, sans exagérer.", en: 'Fine, fine… a day and a half to the inn, no exaggeration.' },
+            st: { k: 'rel', a: 'auberge', b: 'moulin_milieu', j: 1.5, exact: true,
+              text: { fr: "L'auberge est à une journée et demie du Moulin Milieu.", en: 'The inn is a day and a half from the Middle Mill.' } }
+          }
+        },
+        {
+          id: 'pip', emoji: '🧒', name: { fr: 'Pip', en: 'Pip' }, job: { fr: 'Enfant du village', en: 'Village child' },
+          trait: { fr: 'Naïf, confond parfois la gauche et la droite. Fiable de près.', en: 'Naive, sometimes mixes up left and right. Reliable up close.' },
+          statements: [
+            { k: 'rel', a: 'pont', b: 'moulin_milieu', cap: 'S', near: true,
+              text: { fr: 'Le pont, c’est juste en dessous du Moulin Milieu, tout près !', en: 'The bridge is right below the Middle Mill, really close!' } }
+          ],
+          ask: {
+            reply: { fr: 'Il y a une planche qui traverse la rivière : c’est ça, le pont !', en: "There's a plank across the river: that's the bridge!" },
+            st: { k: 'cross', a: 'pont', path: 'riviere',
+              text: { fr: 'Le pont enjambe la rivière.', en: 'The bridge crosses the river.' } }
+          }
+        },
+        {
+          id: 'odile', emoji: '👵', name: { fr: 'Tante Odile', en: 'Aunt Odile' }, job: { fr: 'Tante du meunier', en: "The miller's aunt" },
+          trait: { fr: 'Un peu confuse : elle s’embrouille parfois.', en: 'A bit confused: she sometimes gets muddled.' },
+          statements: [
+            { k: 'rel', a: 'auberge', b: 'moulin_milieu', cap: 'W', wrong: true,
+              text: { fr: 'L’auberge ? À l’ouest du Moulin Milieu, bien sûr.', en: 'The inn? West of the Middle Mill, of course.' } }
+          ],
+          ask: {
+            reply: { fr: 'Oh… mes gauches et mes droites ! L’auberge est à l’EST, pardon, pardon.', en: 'Oh… my lefts and rights! The inn is to the EAST, sorry, sorry.' },
+            st: { k: 'rel', a: 'auberge', b: 'moulin_milieu', cap: 'E',
+              text: { fr: 'L’auberge est à l’est du Moulin Milieu.', en: 'The inn is east of the Middle Mill.' } }
+          },
+          why: {
+            fr: 'Tante Odile confond l’ouest et l’est depuis l’enfance. Aucune malice : juste une vieille habitude.',
+            en: 'Aunt Odile has mixed up east and west since childhood. No malice, just an old habit.'
+          }
+        }
+      ],
+      faulty: ['odile'],
+      scouts: [
+        { k: 'rel', a: 'auberge', b: 'moulin_milieu', cap: 'NE',
+          text: { fr: 'L’auberge est bien au nord-est du Moulin Milieu.', en: 'The inn really is northeast of the Middle Mill.' } }
+      ],
+      outro: { fr: 'Pas mal pour un début. Le royaume vous attend.', en: 'Not bad for a start. The kingdom awaits you.' },
+      note:  { fr: 'Cherche toujours deux voix qui s’accordent.', en: 'Always look for two voices that agree.' }
+    },
+
+    /* ───────────── 2 · Les Rives du Vieux Gué ───────────── */
+    {
+      id: 2,
+      title: { fr: 'Les Rives du Vieux Gué', en: 'The Banks of the Old Ford' },
+      scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 2, scout: 1 },
+      king: {
+        fr: '« La rivière a changé de lit, et les anciennes cartes ne s’accordent plus. Relevez-la pour moi. »',
+        en: '"The river has changed its bed, and the old maps no longer agree. Chart it for me."'
+      },
+      hint: {
+        fr: 'La Rivière Vieille descend du nord, passe au Pont Cassé puis au Gué, et file vers le sud-est.',
+        en: 'The Old River flows down from the north, past the Broken Bridge and the Ford, then runs southeast.'
+      },
+      places: [
+        { id: 'gue',        type: 'gue',        name: { fr: 'Gué',                   en: 'Ford' },            truth: [50, 45] },
+        { id: 'saule',      type: 'village',    name: { fr: 'Village de Saule',      en: 'Saule Village' },   truth: [30, 60] },
+        { id: 'ferme',      type: 'ferme',      name: { fr: 'Ferme des Roseaux',     en: 'Reed Farm' },       truth: [75, 65] },
+        { id: 'chapelle',   type: 'chapelle',   name: { fr: 'Chapelle Sainte-Anne',  en: "St Anne's Chapel" }, truth: [60, 20] },
+        { id: 'tannerie',   type: 'tannerie',   name: { fr: 'Tannerie',              en: 'Tannery' },         truth: [20, 30] },
+        { id: 'pont_casse', type: 'pont_casse', name: { fr: 'Pont Cassé',            en: 'Broken Bridge' },   truth: [50, 70] }
+      ],
+      paths: [
+        { id: 'riviere', type: 'river', name: { fr: 'Rivière Vieille', en: 'Old River' },
+          truth: [[55, 90], [50, 70], [50, 45], [62, 25], [70, 5]] }
+      ],
+      witnesses: [
+        {
+          id: 'gaspard', emoji: '🎣', name: { fr: 'Gaspard', en: 'Gaspard' }, job: { fr: 'Pêcheur', en: 'Fisherman' },
+          trait: { fr: 'Connaît l’eau mieux que personne. Fiable sur les rivières.', en: 'Knows the water better than anyone. Reliable on rivers.' },
+          statements: [
+            { k: 'side', a: 'saule', path: 'riviere', cap: 'W',
+              text: { fr: 'Saule est sur la rive ouest de la rivière.', en: 'Saule is on the west bank of the river.' } },
+            { k: 'rel', a: 'saule', b: 'gue', j: 1, approx: true,
+              text: { fr: 'Saule est à environ une journée du gué.', en: 'Saule is about a day from the ford.' } },
+            { k: 'cross', a: 'gue', path: 'riviere',
+              text: { fr: 'Le gué, c’est là où je pêche : en plein sur la rivière.', en: "The ford is where I fish: right on the river." } }
+          ],
+          ask: {
+            reply: { fr: 'La crue de l’an 12 a tout déplacé. Mais Saule, elle, est au nord-ouest du gué.', en: 'The flood of year 12 moved everything. But Saule is northwest of the ford.' },
+            st: { k: 'rel', a: 'saule', b: 'gue', cap: 'NW',
+              text: { fr: 'Saule est au nord-ouest du gué.', en: 'Saule is northwest of the ford.' } }
+          }
+        },
+        {
+          id: 'rufus', emoji: '💂', name: { fr: 'Rufus', en: 'Rufus' }, job: { fr: 'Soldat', en: 'Soldier' },
+          trait: { fr: 'Caps exacts, distances à la lieue. Fiable.', en: 'Exact bearings, distances by the league. Reliable.' },
+          statements: [
+            { k: 'rel', a: 'chapelle', b: 'gue', cap: 'SE', j: 1, jmin: true,
+              text: { fr: 'La chapelle est au sud-est du gué, à plus d’une journée.', en: 'The chapel is southeast of the ford, more than a day away.' } },
+            { k: 'rel', a: 'tannerie', b: 'saule', cap: 'S', j: 1.5,
+              text: { fr: 'La tannerie est au sud de Saule, à une journée et demie.', en: 'The tannery is south of Saule, a day and a half away.' } },
+            { k: 'rel', a: 'ferme', b: 'pont_casse', cap: 'E', j: 1.25,
+              text: { fr: 'La ferme est à l’est du Pont Cassé, à un peu plus d’une journée.', en: 'The farm is east of the Broken Bridge, a little over a day away.' } }
+          ],
+          ask: {
+            reply: { fr: 'Pour être précis : la chapelle est à une journée et quart du gué.', en: 'To be precise: the chapel is a day and a quarter from the ford.' },
+            st: { k: 'rel', a: 'chapelle', b: 'gue', j: 1.25, exact: true,
+              text: { fr: 'La chapelle est à une journée et quart du gué.', en: 'The chapel is a day and a quarter from the ford.' } }
+          }
+        },
+        {
+          id: 'bartolo', emoji: '🧔', name: { fr: 'Bartolo', en: 'Bartolo' }, job: { fr: 'Marchand', en: 'Merchant' },
+          bias: { dist: 1.3 },
+          trait: { fr: 'Exagère les distances (environ +30 %). Fiable sur les routes.', en: 'Exaggerates distances (about +30%). Reliable on roads.' },
+          statements: [
+            { k: 'rel', a: 'pont_casse', b: 'gue', cap: 'N', j: 1.5,
+              text: { fr: 'Le pont cassé est au nord du gué, une journée et demie !', en: 'The broken bridge is north of the ford, a day and a half!' } },
+            { k: 'cross', a: 'pont_casse', path: 'riviere',
+              text: { fr: 'Le pont cassé, c’est sur la rivière, forcément !', en: 'The broken bridge is on the river, obviously!' } }
+          ],
+          ask: {
+            reply: { fr: 'Bon… une journée et quart, si on ne compte pas les ornières.', en: 'Well… a day and a quarter, if you leave out the ruts.' },
+            st: { k: 'rel', a: 'pont_casse', b: 'gue', j: 1.25, exact: true,
+              text: { fr: 'Le pont cassé est à une journée et quart du gué.', en: 'The broken bridge is a day and a quarter from the ford.' } }
+          }
+        },
+        {
+          id: 'pip', emoji: '🧒', name: { fr: 'Pip', en: 'Pip' }, job: { fr: 'Enfant', en: 'Child' },
+          trait: { fr: 'Naïf, confond parfois la gauche et la droite. Fiable de près.', en: 'Naive, sometimes mixes up left and right. Reliable up close.' },
+          statements: [
+            { k: 'opp', a: 'ferme', b: 'saule', path: 'riviere',
+              text: { fr: 'La ferme est de l’autre côté de la rivière par rapport au village.', en: 'The farm is on the other side of the river from the village.' } },
+            { k: 'cross', a: 'chapelle', path: 'riviere', r: 8,
+              text: { fr: 'La chapelle est tout près de la rivière !', en: 'The chapel is really close to the river!' } }
+          ],
+          ask: {
+            reply: { fr: 'La ferme ? En haut à droite du gué ! Euh… au nord-est.', en: 'The farm? Up and to the right of the ford! Er… northeast.' },
+            st: { k: 'rel', a: 'ferme', b: 'gue', cap: 'NE',
+              text: { fr: 'La ferme est au nord-est du gué.', en: 'The farm is northeast of the ford.' } }
+          }
+        },
+        {
+          id: 'hermance', emoji: '👩‍🦳', name: { fr: 'Hermance', en: 'Hermance' }, job: { fr: 'Vieille sage', en: 'Old sage' },
+          trait: { fr: 'Se souvient d’avant. Ses souvenirs datent peut-être.', en: 'Remembers the old days. Her memories may be out of date.' },
+          statements: [
+            { k: 'side', a: 'saule', path: 'riviere', cap: 'E', wrong: true,
+              text: { fr: 'De mon temps, la rivière passait à l’ouest de Saule, pas à l’est.', en: 'In my day the river ran west of Saule, not east.' } },
+            { k: 'cross', a: 'gue', path: 'riviere',
+              text: { fr: 'Le gué n’a jamais bougé : la rivière passe toujours par là.', en: 'The ford has never moved: the river still runs through it.' } }
+          ],
+          ask: {
+            reply: { fr: 'Ah… je décrivais l’ancien lit. Oui, aujourd’hui Saule est bien sur la rive ouest.', en: 'Ah… I was describing the old bed. Yes, today Saule is on the west bank.' },
+            st: { k: 'side', a: 'saule', path: 'riviere', cap: 'W',
+              text: { fr: 'Aujourd’hui, Saule est sur la rive ouest.', en: 'Today, Saule is on the west bank.' } }
+          },
+          why: {
+            fr: 'Hermance décrivait l’ancien lit de la rivière, d’avant la crue de l’an 12. Sa mémoire n’ment pas : elle est simplement périmée.',
+            en: "Hermance described the river's old bed, from before the flood of year 12. Her memory isn't lying: it's just out of date."
+          }
+        }
+      ],
+      faulty: ['hermance'],
+      scouts: [
+        { k: 'side', a: 'saule', path: 'riviere', cap: 'W',
+          text: { fr: 'Saule est bien à l’ouest de la rivière.', en: 'Saule really is west of the river.' } }
+      ],
+      outro: { fr: 'Les rivières mentent plus que les hommes, dit-on.', en: 'Rivers lie more than men, they say.' },
+      note:  { fr: 'Là où l’eau change de lit, la mémoire vieillit.', en: 'Where water changes its bed, memory grows old.' }
+    }
+  ];
+
+  var Levels = { list: LEVELS };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Levels;
+  else root.Levels = Levels;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+;
+/* Le Cartographe — textes d'interface FR / EN */
+(function (root) {
+  'use strict';
+  var D = {
+    fr: {
+      title: 'Le Cartographe',
+      tagline: 'Dessine le monde, un témoignage à la fois.',
+      version: 'V0 · test',
+      play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
+      submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
+      ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
+      night: 'De nuit', confirm: 'Remettre cette carte au roi ?', result: 'Score : {s} % · {ok} lieux justes sur {t}',
+      liar: '{name} mentait : {motif}', retry: 'Recommencer', next: 'Contrée suivante', export_: 'Exporter la carte (PNG)',
+      settings: 'Réglages', lang: 'Langue', reset: 'Effacer la sauvegarde ?', install: 'Ajouter à l’écran d’accueil',
+      offline: 'Hors-ligne : tout est prêt.', error: 'Oups, la sauvegarde a échoué.',
+
+      back: 'Retour', start: 'Commencer', close: 'Fermer', notYet: 'Pas encore', handIn: 'Remettre', erase: 'Effacer',
+      region: 'Contrée {n}', stars: '{n} étoile(s)', best: 'Meilleur : {s} %', locked: 'Verrouillée', soon: 'Bientôt',
+      soonText: 'Les contrées 3 à 8 arrivent dans la prochaine version.',
+      kingHint: 'Le roi précise', atlasText: 'Les contrées que vous avez relevées pour le roi.',
+      orlanNotes: 'Notes d’Orlan', orlanNote: 'Note d’Orlan n°{n}', noNotes: 'Aucune note retrouvée pour l’instant.',
+
+      move: 'Déplacer', draw: 'Tracer', drawPath: 'Tracer : {name}', undo: 'Annuler', removeStamp: 'Retirer',
+      recenter: 'Recentrer', eraseStroke: 'Gommer le tracé', pin: 'Surligner', unpin: 'Ne plus surligner',
+      stampsTitle: 'Tampons', stampsHelp: 'Glissez un tampon sur le parchemin. Relâchez-le hors de la carte pour le reprendre.',
+      pathsTitle: 'Tracés', pathsHelp: 'Choisissez un tracé, puis dessinez au doigt. Un nouveau trait remplace l’ancien.',
+      placed: 'posé', notPlaced: 'à poser', drawn: 'tracé', notDrawn: 'à tracer',
+      rulerHint: 'Glissez d’un point à un autre pour mesurer.', drawHint: 'Dessinez au doigt : {name}.',
+      toolsTitle: 'Outils', ghostLegend: 'Tracé net = respecté · pointillé = brisé',
+      ghostOn: 'Indices affichés', ghostOff: 'Indices masqués',
+      okMark: 'respecté', koMark: 'brisé', naMark: 'pas encore posé',
+
+      says: 'dit', reply: 'Réponse', alreadyAsked: 'A déjà répondu', noToken: 'Plus de jeton',
+      scoutCardTitle: 'Éclaireur', scoutVerified: 'Fait vérifié sur le terrain', scoutNone: 'Aucun fait révélé.',
+      scoutEmpty: 'Plus rien à révéler', askBtn: 'Poser une question', scoutBtn: 'Envoyer l’éclaireur',
+      suspected: 'Soupçonné', nobody: 'Aucun témoin.',
+      statusOk: 'respecté par votre carte', statusKo: 'brisé par votre carte', statusNa: 'pas encore vérifiable',
+
+      missing: 'Il manque {n} élément(s) sur la carte. Le roi sera moins exigeant sur ce qui manque, mais ce sera compté en erreur.',
+      completeSure: 'Tout est en place.',
+      resultTitle: 'Verdict du roi', detail: 'Détail', detailShow: 'Voir le détail', detailHide: 'Masquer le détail',
+      vOk: 'juste', vNear: 'approché', vKo: 'raté', vMissing: 'absent', gap: 'écart : {d} j',
+      liarsTitle: 'Qui se trompait', unmasked: 'Démasqué', unnoticed: 'Passé inaperçu',
+      falseSuspect: 'Soupçon injustifié : {name} disait vrai.', noScoutBadge: 'Sans éclaireur',
+      thirdStarNeed: 'Pour la 3e étoile, il faut aussi soupçonner les témoins fautifs avant de remettre la carte.',
+      newBest: 'Nouveau meilleur score !', legendTruth: 'Vraie carte', legendYours: 'Votre carte',
+      exported: 'Image prête.', exportFail: 'Impossible d’exporter l’image ici.',
+      endOfV0: 'Fin de la version test : les contrées 3 à 8 arrivent bientôt.',
+
+      settingsTitle: 'Réglages', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
+      on: 'activé', off: 'désactivé', exportSave: 'Exporter la sauvegarde', importSave: 'Importer une sauvegarde',
+      resetYes: 'Effacer', savedOk: 'Sauvegarde importée.', importFail: 'Fichier de sauvegarde illisible.',
+      saveText: 'Zone de sauvegarde (copiez ou collez ce texte)', importBtn: 'Importer ce texte',
+      about: 'Zéro pub, zéro achat. Fait par Keismey Studio.',
+
+      tutStep: 'Tutoriel {i}/{n}', tutNext: 'Suivant', tutSkip: 'Passer', tutDone: 'Compris',
+      tut1: 'Touchez Odo dans le Carnet.',
+      tut2: 'Chaque phrase devient un indice dans le carnet.',
+      tut3: 'Ouvrez Outils, puis glissez le Moulin Haut sur le parchemin.',
+      tut4: 'Utilisez la règle-journées pour mesurer entre deux repères.',
+      tut5: 'Deux témoignages se contredisent ? Posez une Question.',
+      tut6: 'Remettez la carte quand vous êtes prêt.',
+
+      oneDay: 'une journée', armHint: 'Touchez le parchemin pour poser : {name}.',
+      holdToSave: 'Maintenez l’image appuyée pour l’enregistrer.', download: 'Télécharger', copy: 'Copier', copied: 'Copié.',
+      exportTitle: 'Votre carte', zoomIn: 'Zoom +', zoomOut: 'Zoom −', hintSelected: 'Tampon sélectionné : {name}.',
+      resume: 'Reprendre', unplacedWarn: 'À poser',
+      unitDay: 'j', daysWord: 'journée(s)',
+      caps: { N: 'N', NE: 'NE', E: 'E', SE: 'SE', S: 'S', SW: 'SO', W: 'O', NW: 'NO' }
+    },
+    en: {
+      title: 'The Cartographer',
+      tagline: 'Draw the world, one testimony at a time.',
+      version: 'V0 · test',
+      play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
+      submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
+      ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
+      night: 'At night', confirm: 'Hand this map to the king?', result: 'Score: {s}% · {ok} of {t} places correct',
+      liar: '{name} was lying: {motif}', retry: 'Retry', next: 'Next region', export_: 'Export map (PNG)',
+      settings: 'Settings', lang: 'Language', reset: 'Erase save?', install: 'Add to home screen',
+      offline: 'Offline: all set.', error: 'Oops, saving failed.',
+
+      back: 'Back', start: 'Begin', close: 'Close', notYet: 'Not yet', handIn: 'Submit', erase: 'Erase',
+      region: 'Region {n}', stars: '{n} star(s)', best: 'Best: {s}%', locked: 'Locked', soon: 'Soon',
+      soonText: 'Regions 3 to 8 arrive in the next version.',
+      kingHint: 'The king adds', atlasText: 'The regions you have charted for the king.',
+      orlanNotes: 'Orlan’s notes', orlanNote: 'Orlan’s note no. {n}', noNotes: 'No notes found yet.',
+
+      move: 'Move', draw: 'Draw', drawPath: 'Draw: {name}', undo: 'Undo', removeStamp: 'Remove',
+      recenter: 'Recenter', eraseStroke: 'Erase stroke', pin: 'Highlight', unpin: 'Stop highlighting',
+      stampsTitle: 'Stamps', stampsHelp: 'Drag a stamp onto the parchment. Release it off the map to take it back.',
+      pathsTitle: 'Strokes', pathsHelp: 'Pick a stroke, then draw with your finger. A new stroke replaces the old one.',
+      placed: 'placed', notPlaced: 'to place', drawn: 'drawn', notDrawn: 'to draw',
+      rulerHint: 'Drag from one point to another to measure.', drawHint: 'Draw with your finger: {name}.',
+      toolsTitle: 'Tools', ghostLegend: 'Solid = respected · dotted = broken',
+      ghostOn: 'Clues shown', ghostOff: 'Clues hidden',
+      okMark: 'respected', koMark: 'broken', naMark: 'not placed yet',
+
+      says: 'says', reply: 'Reply', alreadyAsked: 'Already answered', noToken: 'No token left',
+      scoutCardTitle: 'Scout', scoutVerified: 'Fact verified on the ground', scoutNone: 'No fact revealed.',
+      scoutEmpty: 'Nothing left to reveal', askBtn: 'Ask a question', scoutBtn: 'Send the scout',
+      suspected: 'Suspected', nobody: 'No witness.',
+      statusOk: 'respected by your map', statusKo: 'broken by your map', statusNa: 'cannot be checked yet',
+
+      missing: '{n} element(s) are missing from the map. They will count as errors.',
+      completeSure: 'Everything is in place.',
+      resultTitle: 'The king’s verdict', detail: 'Details', detailShow: 'Show details', detailHide: 'Hide details',
+      vOk: 'correct', vNear: 'close', vKo: 'missed', vMissing: 'missing', gap: 'off by {d} d',
+      liarsTitle: 'Who was wrong', unmasked: 'Unmasked', unnoticed: 'Went unnoticed',
+      falseSuspect: 'Unfounded suspicion: {name} was telling the truth.', noScoutBadge: 'No scout',
+      thirdStarNeed: 'For the 3rd star, you must also suspect the faulty witnesses before submitting.',
+      newBest: 'New best score!', legendTruth: 'True map', legendYours: 'Your map',
+      exported: 'Image ready.', exportFail: 'Cannot export the image here.',
+      endOfV0: 'End of the test version: regions 3 to 8 are coming soon.',
+
+      settingsTitle: 'Settings', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
+      on: 'on', off: 'off', exportSave: 'Export save', importSave: 'Import a save',
+      resetYes: 'Erase', savedOk: 'Save imported.', importFail: 'Unreadable save file.',
+      saveText: 'Save area (copy or paste this text)', importBtn: 'Import this text',
+      about: 'No ads, no purchases. Made by Keismey Studio.',
+
+      tutStep: 'Tutorial {i}/{n}', tutNext: 'Next', tutSkip: 'Skip', tutDone: 'Got it',
+      tut1: 'Tap Odo in the Notebook.',
+      tut2: 'Every sentence becomes a clue in the notebook.',
+      tut3: 'Open Tools, then drag the Upper Mill onto the parchment.',
+      tut4: 'Use the day ruler to measure between two landmarks.',
+      tut5: 'Two testimonies disagree? Ask a Question.',
+      tut6: 'Submit the map when you are ready.',
+
+      oneDay: 'one day', armHint: 'Tap the parchment to place: {name}.',
+      holdToSave: 'Press and hold the image to save it.', download: 'Download', copy: 'Copy', copied: 'Copied.',
+      exportTitle: 'Your map', zoomIn: 'Zoom +', zoomOut: 'Zoom −', hintSelected: 'Stamp selected: {name}.',
+      resume: 'Resume', unplacedWarn: 'To place',
+      unitDay: 'd', daysWord: 'day(s)',
+      caps: { N: 'N', NE: 'NE', E: 'E', SE: 'SE', S: 'S', SW: 'SW', W: 'W', NW: 'NW' }
+    }
+  };
+
+  var lang = 'fr';
+  var I18n = {
+    get lang() { return lang; },
+    set: function (l) { lang = D[l] ? l : 'fr'; },
+    t: function (k, vars) {
+      var s = (D[lang][k] != null ? D[lang][k] : D.fr[k]);
+      if (typeof s !== 'string') return s != null ? s : k;
+      if (vars) for (var v in vars) s = s.split('{' + v + '}').join(vars[v]);
+      return s;
+    },
+    loc: function (o) { return o ? (o[lang] != null ? o[lang] : o.fr) : ''; },
+    caps: function () { return D[lang].caps; },
+    /* nombre de journées : 1,5 j (fr) / 1.5 d (en) */
+    days: function (n) {
+      var r = Math.round(n * 4) / 4, txt = (Math.round(r * 100) / 100).toString();
+      if (lang === 'fr') txt = txt.replace('.', ',');
+      return txt + ' ' + D[lang].unitDay;
+    },
+    dict: D
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = I18n;
+  else root.I18n = I18n;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+;
+/* Le Cartographe — dessin : tampons vectoriels, parchemin, rose des vents, tracés lissés. */
+(function (root) {
+  'use strict';
+  var INK = '#3a2c1c';
+
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s |= 0; s = s + 0x6D2B79F5 | 0;
+      var t = Math.imul(s ^ s >>> 15, 1 | s);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function poly(ctx, pts, close) {
+    ctx.beginPath();
+    pts.forEach(function (p, i) { if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); });
+    if (close) ctx.closePath();
+  }
+
+  /* Chaque glyphe se dessine dans [-1,1]² ; ctx est déjà translaté/mis à l'échelle. */
+  var G = {
+    moulin: function (c) {
+      poly(c, [[-.42, .85], [-.28, -.15], [.28, -.15], [.42, .85]], true); c.fill(); c.stroke();
+      poly(c, [[-.34, -.15], [0, -.5], [.34, -.15]], true); c.stroke();
+      var a, hx = 0, hy = -.42;
+      for (a = 0; a < 4; a++) {
+        var ang = Math.PI / 4 + a * Math.PI / 2, ex = hx + Math.cos(ang) * .86, ey = hy + Math.sin(ang) * .86;
+        c.beginPath(); c.moveTo(hx, hy); c.lineTo(ex, ey); c.stroke();
+        var px = -Math.sin(ang) * .2, py = Math.cos(ang) * .2, mx = hx + Math.cos(ang) * .45, my = hy + Math.sin(ang) * .45;
+        poly(c, [[mx, my], [ex, ey], [ex + px, ey + py], [mx + px, my + py]], true); c.stroke();
+      }
+    },
+    pont: function (c) {
+      c.beginPath(); c.moveTo(-.95, .05); c.lineTo(.95, .05); c.stroke();
+      c.beginPath(); c.moveTo(-.95, -.22); c.lineTo(.95, -.22); c.stroke();
+      [-.7, -.35, 0, .35, .7].forEach(function (x) { c.beginPath(); c.moveTo(x, -.22); c.lineTo(x, .05); c.stroke(); });
+      c.beginPath(); c.arc(0, .05, .62, 0, Math.PI); c.stroke();
+      c.beginPath(); c.moveTo(-.95, .05); c.lineTo(-.95, .3); c.moveTo(.95, .05); c.lineTo(.95, .3); c.stroke();
+    },
+    pont_casse: function (c) {
+      c.beginPath(); c.moveTo(-.95, .05); c.lineTo(-.22, .05); c.moveTo(-.95, -.22); c.lineTo(-.22, -.22); c.stroke();
+      c.beginPath(); c.moveTo(.22, .38); c.lineTo(.95, .38); c.moveTo(.22, .12); c.lineTo(.95, .12); c.stroke();
+      c.beginPath(); c.arc(-.6, .05, .38, 0, Math.PI * .85); c.stroke();
+      c.beginPath(); c.arc(.6, .38, .38, Math.PI * .15, Math.PI); c.stroke();
+      poly(c, [[-.1, -.1], [.02, .12], [-.08, .2], [.06, .55]], false); c.stroke();
+    },
+    auberge: function (c) {
+      c.beginPath(); c.rect(-.6, -.12, 1.2, .86); c.fill(); c.stroke();
+      poly(c, [[-.78, -.12], [0, -.85], [.78, -.12]], true); c.fill(); c.stroke();
+      c.beginPath(); c.rect(-.14, .2, .28, .54); c.stroke();
+      c.beginPath(); c.rect(.34, -.62, .16, .34); c.stroke();
+      c.beginPath(); c.moveTo(.8, -.05); c.lineTo(.8, .4); c.stroke();
+      c.beginPath(); c.rect(.66, .1, .3, .26); c.stroke();
+    },
+    village: function (c) {
+      poly(c, [[-.85, .7], [-.85, 0], [-.45, -.4], [-.05, 0], [-.05, .7]], true); c.fill(); c.stroke();
+      poly(c, [[.05, .7], [.05, .15], [.4, -.2], [.75, .15], [.75, .7]], true); c.fill(); c.stroke();
+      c.beginPath(); c.rect(-.55, .25, .2, .45); c.stroke();
+      c.beginPath(); c.rect(.28, .35, .2, .35); c.stroke();
+    },
+    ferme: function (c) {
+      poly(c, [[-.75, .75], [-.75, -.1], [0, -.8], [.75, -.1], [.75, .75]], true); c.fill(); c.stroke();
+      c.beginPath(); c.rect(-.32, .1, .64, .65); c.stroke();
+      c.beginPath(); c.moveTo(-.32, .1); c.lineTo(.32, .75); c.moveTo(.32, .1); c.lineTo(-.32, .75); c.stroke();
+    },
+    chapelle: function (c) {
+      c.beginPath(); c.rect(-.62, .05, 1.24, .72); c.fill(); c.stroke();
+      c.beginPath(); c.rect(-.2, -.45, .4, .5); c.fill(); c.stroke();
+      poly(c, [[-.28, -.45], [0, -.78], [.28, -.45]], true); c.stroke();
+      c.beginPath(); c.moveTo(0, -.78); c.lineTo(0, -1.02); c.moveTo(-.1, -.92); c.lineTo(.1, -.92); c.stroke();
+      c.beginPath(); c.arc(0, .5, .16, Math.PI, 0); c.lineTo(.16, .77); c.lineTo(-.16, .77); c.closePath(); c.stroke();
+    },
+    tannerie: function (c) {
+      poly(c, [[-.8, .7], [-.8, .05], [-.4, -.4], [0, .05], [0, .7]], true); c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(.3, -.45); c.lineTo(.3, .75); c.moveTo(.95, -.45); c.lineTo(.95, .75); c.moveTo(.3, -.45); c.lineTo(.95, -.45); c.stroke();
+      poly(c, [[.4, -.38], [.85, -.38], [.8, .1], [.9, .3], [.7, .5], [.6, .35], [.45, .5], [.35, .2]], true); c.fill(); c.stroke();
+    },
+    gue: function (c) {
+      [-.5, -.05, .4].forEach(function (y) {
+        c.beginPath(); c.moveTo(-.95, y);
+        c.bezierCurveTo(-.6, y - .22, -.4, y + .22, -.05, y); c.bezierCurveTo(.3, y - .22, .55, y + .22, .95, y); c.stroke();
+      });
+      [[-.5, .15], [0, .2], [.5, .15]].forEach(function (p) {
+        c.beginPath(); c.ellipse(p[0], p[1], .2, .13, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      });
+    },
+    _default: function (c) {
+      c.beginPath(); c.arc(0, 0, .6, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(0, 0, .14, 0, Math.PI * 2); c.fill();
+    }
+  };
+
+  function glyph(ctx, type, cx, cy, r, fill) {
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(r, r);
+    ctx.lineWidth = 0.11; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = INK; ctx.fillStyle = fill || '#cdb98c';
+    (G[type] || G._default)(ctx);
+    ctx.restore();
+  }
+
+  /* Parchemin : texture générée une fois (taille fixe), puis étirée. */
+  var parch = null;
+  function parchment() {
+    if (parch) return parch;
+    var N = 768, c = document.createElement('canvas'); c.width = c.height = N;
+    var x = c.getContext('2d'), R = rng(7);
+    var g = x.createRadialGradient(N * .5, N * .46, N * .12, N * .5, N * .5, N * .78);
+    g.addColorStop(0, '#efe5c8'); g.addColorStop(.7, '#e2d3a8'); g.addColorStop(1, '#c8b077');
+    x.fillStyle = g; x.fillRect(0, 0, N, N);
+    var i;
+    for (i = 0; i < 26; i++) {
+      var px = R() * N, py = R() * N, pr = 40 + R() * 110, gg = x.createRadialGradient(px, py, 0, px, py, pr);
+      var dark = R() < .6;
+      gg.addColorStop(0, dark ? 'rgba(120,88,40,.10)' : 'rgba(255,248,225,.16)'); gg.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = gg; x.fillRect(px - pr, py - pr, pr * 2, pr * 2);
+    }
+    for (i = 0; i < 3800; i++) {
+      x.fillStyle = 'rgba(' + (90 + R() * 40 | 0) + ',' + (62 + R() * 30 | 0) + ',30,' + (R() * .07).toFixed(3) + ')';
+      x.fillRect(R() * N, R() * N, 1 + R() * 2, 1 + R() * 2);
+    }
+    x.lineWidth = 1;
+    for (i = 0; i < 90; i++) {
+      x.strokeStyle = 'rgba(110,80,40,' + (R() * .06).toFixed(3) + ')';
+      var sx = R() * N, sy = R() * N; x.beginPath(); x.moveTo(sx, sy);
+      x.quadraticCurveTo(sx + (R() - .5) * 90, sy + (R() - .5) * 90, sx + (R() - .5) * 140, sy + (R() - .5) * 140); x.stroke();
+    }
+    parch = c;
+    return c;
+  }
+
+  function rose(ctx, cx, cy, r, ink) {
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.strokeStyle = ink || INK; ctx.fillStyle = ink || INK; ctx.lineWidth = Math.max(1, r * .05);
+    ctx.beginPath(); ctx.arc(0, 0, r * .62, 0, Math.PI * 2); ctx.stroke();
+    var k, a;
+    for (k = 0; k < 8; k++) {
+      a = k * Math.PI / 4 - Math.PI / 2; var long_ = k % 2 === 0, L = long_ ? r : r * .62, W = long_ ? r * .16 : r * .1;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * L, Math.sin(a) * L);
+      ctx.lineTo(Math.cos(a + Math.PI / 2) * W, Math.sin(a + Math.PI / 2) * W);
+      ctx.lineTo(0, 0); ctx.lineTo(Math.cos(a - Math.PI / 2) * W, Math.sin(a - Math.PI / 2) * W);
+      ctx.closePath(); if (k === 0) ctx.fill(); else ctx.stroke();
+    }
+    ctx.font = 'bold ' + Math.round(r * .5) + 'px Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('N', 0, -r * 1.28);
+    ctx.restore();
+  }
+
+  /* Catmull-Rom → courbes de Bézier, points déjà en pixels */
+  function smooth(ctx, pts) {
+    if (!pts.length) return;
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    if (pts.length === 2) { ctx.lineTo(pts[1].x, pts[1].y); return; }
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      ctx.bezierCurveTo(p1.x + (p2.x - p0.x) / 6, p1.y + (p2.y - p0.y) / 6, p2.x - (p3.x - p1.x) / 6, p2.y - (p3.y - p1.y) / 6, p2.x, p2.y);
+    }
+  }
+
+  var Art = { INK: INK, glyph: glyph, parchment: parchment, rose: rose, smooth: smooth, rng: rng };
+  if (typeof module !== 'undefined' && module.exports) module.exports = Art;
+  else root.Art = Art;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+;
+/* Le Cartographe — application (état, écrans, interactions, rendu du parchemin). */
+(function () {
+  'use strict';
+  var Core = window.Core, LEVELS = window.Levels.list, Art = window.Art, I = window.I18n;
+  var t = I.t, loc = I.loc;
+  var FONT = "'IM Fell English', Georgia, 'Times New Roman', serif";
+  var KEY = 'keismey.cartographe.v1';
+
+  /* ───────────── utilitaires ───────────── */
+  function h(tag, a, kids) {
+    var e = document.createElement(tag); a = a || {};
+    for (var k in a) {
+      var v = a[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k === 'text') e.textContent = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    (kids || []).forEach(function (c) { if (c == null || c === false) return; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function $(s, r) { return (r || document).querySelector(s); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function deepMerge(base, o) {
+    if (!o || typeof o !== 'object') return base;
+    for (var k in o) { if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) && base[k] && typeof base[k] === 'object') deepMerge(base[k], o[k]); else base[k] = o[k]; }
+    return base;
+  }
+
+  /* ───────────── sauvegarde ───────────── */
+  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, tutDone: false, started: false }; }
+  var save = (function () {
+    try { var raw = localStorage.getItem(KEY); if (raw) return deepMerge(defaultSave(), JSON.parse(raw)); } catch (e) {}
+    return defaultSave();
+  })();
+  var saveTimer = null, saveWarned = false;
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try { localStorage.setItem(KEY, JSON.stringify(save)); }
+      catch (e) { if (!saveWarned) { saveWarned = true; toast(t('error')); } }
+    }, 200);
+  }
+
+  /* ───────────── état ───────────── */
+  var S = {
+    screen: 'title', levelIdx: 0, level: null, phase: 'play',
+    placed: {}, drawn: {}, asked: {}, scoutsUsed: 0, suspects: {}, pins: {},
+    mode: 'move', activePath: null, ghost: false, panel: 'tools', openCard: null,
+    selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false
+  };
+  var view = { z: 1, s0: 3, ox: 0, oy: 0 };
+  var COL = { ok: '#3f8a52', ko: '#c4382c', near: '#c58a1d' };
+  function readColors() {
+    var cs = getComputedStyle(document.documentElement);
+    COL.ok = cs.getPropertyValue('--ok').trim() || COL.ok; COL.ko = cs.getPropertyValue('--ko').trim() || COL.ko; COL.near = cs.getPropertyValue('--near').trim() || COL.near;
+  }
+
+  /* ───────────── son & vibration ───────────── */
+  var AC = null;
+  function audio() {
+    if (!save.settings.sound) return null;
+    try { if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+    return AC;
+  }
+  function tone(f, d, type, vol, when, slide) {
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + (when || 0);
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + d);
+    g.gain.setValueAtTime(vol || .12, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + d + .02);
+  }
+  function sfx(name) {
+    try {
+      if (name === 'stamp') { tone(150, .16, 'sine', .22, 0, 60); tone(900, .04, 'square', .03); }
+      else if (name === 'pick') tone(520, .05, 'triangle', .08);
+      else if (name === 'draw') tone(330, .05, 'sawtooth', .03);
+      else if (name === 'chime') { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .5, 'triangle', .11, i * .12); }); }
+      else if (name === 'low') tone(196, .3, 'triangle', .1);
+    } catch (e) {}
+  }
+  function buzz(ms) { if (save.settings.vibrate) try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+
+  /* ───────────── toast & modale ───────────── */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('#toast'); el.textContent = msg; el.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2200);
+  }
+  function modal(nodes) { var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
+  function closeModal() { $('#modal').classList.remove('on'); }
+
+  /* ───────────── navigation ───────────── */
+  function go(name) {
+    S.screen = name;
+    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === name); });
+    if (name === 'atlas') renderAtlas();
+    if (name === 'game') { resize(); fitView(); draw(); }
+  }
+
+  /* ───────────── écran titre ───────────── */
+  function roseSvg() {
+    return '<svg class="rose" viewBox="-50 -50 100 100" aria-hidden="true" fill="none" stroke="#d2a94b" stroke-width="1.6" stroke-linejoin="round">' +
+      '<circle r="30"/><circle r="20" stroke-opacity=".5"/>' +
+      '<path d="M0-46 L6-6 L46 0 L6 6 L0 46 L-6 6 L-46 0 L-6-6Z" fill="#d2a94b" fill-opacity=".14"/>' +
+      '<path d="M0-30 L3-3 L30 0 L3 3 L0 30 L-3 3 L-30 0 L-3-3Z" transform="rotate(45)" stroke-opacity=".6"/></svg>';
+  }
+  function buildTitle() {
+    var el = $('#title'); clear(el);
+    var has = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0;
+    var r = h('div'); r.innerHTML = roseSvg();
+    el.appendChild(r.firstChild);
+    el.appendChild(h('h1', { text: t('title') }));
+    el.appendChild(h('p', { class: 'tag', text: t('tagline') }));
+    el.appendChild(h('div', { class: 'stack' }, [
+      h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) openBriefing(0); else go('atlas'); } }),
+      h('button', { class: 'btn', text: t('atlas'), onclick: function () { go('atlas'); } }),
+      h('button', { class: 'btn ghost', text: t('settings'), onclick: openSettings })
+    ]));
+    el.appendChild(h('div', { class: 'ver', text: 'Keismey Studio · ' + t('version') }));
+  }
+
+  /* ───────────── atlas ───────────── */
+  function unlocked(idx) { if (idx === 0) return true; var p = save.progress[LEVELS[idx - 1].id]; return !!(p && p.stars >= 1); }
+  function starsText(n) { var s = h('span', { class: 'starsrow', 'aria-label': t('stars', { n: n }) }); for (var i = 0; i < 3; i++) s.appendChild(h('span', { class: i < n ? '' : 'off', text: '★' })); return s; }
+  function renderAtlas() {
+    var el = $('#atlas'); clear(el);
+    el.appendChild(h('div', { class: 'topbar gutter' }, [
+      h('button', { class: 'iconbtn', 'aria-label': t('back'), text: '←', onclick: function () { buildTitle(); go('title'); } }),
+      h('h2', { text: t('atlas') }),
+      h('button', { class: 'iconbtn', 'aria-label': t('settings'), text: '⚙', onclick: openSettings })
+    ]));
+    var body = h('div', { class: 'body scroll gutter' });
+    body.appendChild(h('p', { class: 'lead', text: t('atlasText') }));
+    LEVELS.forEach(function (L, i) {
+      var open = unlocked(i), p = save.progress[L.id], inprog = !!save.inprogress[L.id];
+      var th = p && p.thumb ? h('img', { class: 'thumb', src: p.thumb, alt: '' }) : h('div', { class: 'thumb', text: String(L.id) });
+      var btn = h('button', { class: 'region', disabled: open ? null : true, id: 'region-' + L.id, onclick: function () { audio(); openBriefing(i); } }, [
+        th,
+        h('div', { class: 'meta' }, [
+          h('div', { class: 'sub', text: t('region', { n: L.id }) }),
+          h('div', { class: 'nm', text: loc(L.title) }),
+          h('div', { class: 'sub', text: open ? (p ? t('best', { s: Math.round(p.score) }) : (inprog ? t('resume') : '')) : t('locked') })
+        ]),
+        open ? starsText(p ? p.stars : 0) : null
+      ]);
+      body.appendChild(btn);
+    });
+    body.appendChild(h('div', { class: 'region', style: 'opacity:.6;cursor:default' }, [
+      h('div', { class: 'thumb', text: '…' }),
+      h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('soon') }), h('div', { class: 'sub', text: t('soonText') })])
+    ]));
+    body.appendChild(h('h3', { class: 'sec', text: t('orlanNotes') }));
+    var ns = h('div', { class: 'notes' }), any = false;
+    LEVELS.forEach(function (L) {
+      if (save.notes[L.id]) { any = true; ns.appendChild(h('div', { class: 'note' }, [h('small', { text: t('orlanNote', { n: L.id }) }), '« ' + loc(L.note) + ' »'])); }
+    });
+    if (!any) ns.appendChild(h('p', { class: 'help', text: t('noNotes') }));
+    body.appendChild(ns);
+    el.appendChild(body);
+  }
+
+  /* ───────────── briefing ───────────── */
+  function openBriefing(idx) {
+    var L = LEVELS[idx];
+    if (save.inprogress[L.id]) { startLevel(idx, true); return; }
+    var el = $('#briefing'); clear(el);
+    el.className = 'screen gutter';
+    el.appendChild(h('div', { class: 'scroll-card' }, [
+      h('div', { class: 'parch' }, [
+        h('span', { class: 'rg', text: t('region', { n: L.id }) }),
+        h('h2', { text: loc(L.title) }),
+        loc(L.king),
+        h('div', { class: 'hint' }, [h('b', { text: t('kingHint') + ' : ' }), loc(L.hint)])
+      ]),
+      h('button', { class: 'btn primary', id: 'btn-start', text: t('start'), onclick: function () { sfx('pick'); startLevel(idx, false); } }),
+      h('button', { class: 'linkbtn', text: t('back'), onclick: function () { go('atlas'); } })
+    ]));
+    S.screen = 'briefing';
+    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === 'briefing'); });
+  }
+
+  /* ───────────── niveau ───────────── */
+  function startLevel(idx, resume) {
+    var L = LEVELS[idx]; S.levelIdx = idx; S.level = L; S.phase = 'play'; S.result = null; S.detailOpen = false;
+    var ip = resume ? save.inprogress[L.id] : null;
+    if (!resume) delete save.inprogress[L.id];
+    S.placed = ip ? ip.placed || {} : {}; S.drawn = ip ? ip.drawn || {} : {};
+    S.asked = ip ? ip.asked || {} : {}; S.scoutsUsed = ip ? ip.scoutsUsed || 0 : 0;
+    S.suspects = ip ? ip.suspects || {} : {}; S.pins = ip ? ip.pins || {} : {};
+    S.mode = 'move'; S.activePath = null; S.ghost = false; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null;
+    if (L.id === 1 && !save.tutDone && !ip) { S.tut = { step: 1 }; S.panel = 'notebook'; }
+    save.started = true; persist();
+    go('game'); renderAll();
+  }
+  function persistProgress() {
+    if (S.phase !== 'play' || !S.level) return;
+    save.inprogress[S.level.id] = { placed: S.placed, drawn: S.drawn, asked: S.asked, scoutsUsed: S.scoutsUsed, suspects: S.suspects, pins: S.pins };
+    persist();
+  }
+  function snap() { S.undo.push(JSON.stringify({ p: S.placed, d: S.drawn })); if (S.undo.length > 40) S.undo.shift(); }
+  function undo() {
+    if (!S.undo.length || S.phase !== 'play') return;
+    var o = JSON.parse(S.undo.pop()); S.placed = o.p; S.drawn = o.d; sfx('pick'); changed();
+  }
+  function changed() { persistProgress(); draw(); renderPanel(); renderHint(); tutCheck(); }
+
+  /* ───────────── entrées du carnet ───────────── */
+  function entries() {
+    var L = S.level, out = [];
+    L.witnesses.forEach(function (w) {
+      w.statements.forEach(function (st, i) { out.push({ key: w.id + ':' + i, st: st, w: w, kind: 'say' }); });
+      if (S.asked[w.id] && w.ask) out.push({ key: w.id + ':r', st: w.ask.st, w: w, kind: 'reply', reply: w.ask.reply });
+    });
+    L.scouts.slice(0, S.scoutsUsed).forEach(function (st, i) { out.push({ key: 'scout:' + i, st: st, w: {}, kind: 'scout' }); });
+    return out;
+  }
+  function ctxOf(w) {
+    return { pos: function (id) { return S.placed[id] || null; }, path: function (id) { return S.drawn[id] || null; }, scale: S.level.scale, witness: w || {} };
+  }
+  function evalEntry(e) { return Core.evalStatement(e.st, ctxOf(e.w)); }
+  function shownEntries() {
+    var all = entries(), pinned = all.filter(function (e) { return S.pins[e.key]; });
+    if (pinned.length) return pinned;
+    if (S.openCard) return all.filter(function (e) { return e.w && e.w.id === S.openCard; });
+    return [];
+  }
+  function tokensLeft() {
+    var L = S.level;
+    return { ask: Math.max(0, L.tokens.ask - Object.keys(S.asked).length), scout: Math.max(0, Math.min(L.tokens.scout, L.scouts.length) - S.scoutsUsed) };
+  }
+  function placeById(id) { return S.level.places.filter(function (p) { return p.id === id; })[0]; }
+
+  /* ───────────── construction de l'écran de jeu ───────────── */
+  var cv, cx, cw = 0, ch = 0, dpr = 1;
+  function buildGame() {
+    var g = $('#game'); clear(g);
+    g.appendChild(h('div', { class: 'topbar gutter' }, [
+      h('button', { class: 'iconbtn', id: 'btn-exit', 'aria-label': t('atlas'), text: '←', onclick: function () { persistProgress(); go('atlas'); } }),
+      h('h2', { id: 'g-title' }),
+      h('button', { class: 'iconbtn', 'aria-label': t('settings'), text: '⚙', onclick: openSettings })
+    ]));
+    g.appendChild(h('div', { id: 'tut', class: 'gutter' }));
+    var wrap = h('div', { id: 'mapwrap' }, [
+      h('canvas', { id: 'map', 'aria-label': 'map' }),
+      h('div', { class: 'mapfloat tr' }, [
+        h('button', { id: 'z-in', 'aria-label': t('zoomIn'), text: '+', onclick: function () { zoomAt(cw / 2, ch / 2, 1.3); } }),
+        h('button', { id: 'z-out', 'aria-label': t('zoomOut'), text: '−', onclick: function () { zoomAt(cw / 2, ch / 2, 1 / 1.3); } }),
+        h('button', { id: 'z-fit', 'aria-label': t('recenter'), text: '⌖', onclick: function () { fitView(); draw(); } })
+      ]),
+      h('div', { id: 'hint', class: 'maphint', style: 'display:none' }),
+      h('div', { id: 'maplegend', class: 'maplegend', style: 'display:none' })
+    ]);
+    g.appendChild(wrap);
+    g.appendChild(h('div', { id: 'panel' }));
+    g.appendChild(h('div', { id: 'bar', class: 'gutter' }));
+    cv = $('#map'); cx = cv.getContext('2d');
+    bindMap();
+    if (window.ResizeObserver) new ResizeObserver(function () { resize(); draw(); }).observe(wrap);
+    window.addEventListener('resize', function () { resize(); draw(); });
+  }
+  function resize() {
+    if (!cv) return;
+    var r = cv.parentNode.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    var nw = Math.round(r.width), nh = Math.round(r.height); dpr = Math.min(window.devicePixelRatio || 1, 3);
+    if (nw !== cw || nh !== ch) { cw = nw; ch = nh; cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); fitView(); }
+  }
+  function renderAll() { renderTop(); renderBar(); renderPanel(); renderHint(); renderTut(); readColors(); draw(); }
+  function renderTop() {
+    if (!S.level) return;
+    $('#g-title').textContent = S.level.id + ' · ' + loc(S.level.title);
+  }
+  function renderBar() {
+    var b = $('#bar'); clear(b);
+    if (S.phase === 'result') {
+      var hasNext = LEVELS[S.levelIdx + 1] && S.result && S.result.stars >= 1;
+      b.appendChild(h('button', { class: 'btn', id: 'btn-atlas', text: t('atlas'), onclick: function () { go('atlas'); } }));
+      b.appendChild(h('button', { class: 'btn', id: 'btn-retry', text: t('retry'), onclick: function () { startLevel(S.levelIdx, false); } }));
+      b.appendChild(h('button', { class: 'btn primary', id: 'btn-next', disabled: hasNext ? null : true, text: t('next'), onclick: function () { openBriefing(S.levelIdx + 1); } }));
+      return;
+    }
+    b.appendChild(h('button', { class: 'btn' + (S.panel === 'notebook' ? ' active' : ''), id: 'btn-notebook', text: '📖 ' + t('notebook'), onclick: function () { S.panel = 'notebook'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }));
+    b.appendChild(h('button', { class: 'btn' + (S.panel === 'tools' ? ' active' : ''), id: 'btn-tools', text: '🧭 ' + t('tools'), onclick: function () { S.panel = 'tools'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }));
+    b.appendChild(h('button', { class: 'btn primary seal', id: 'btn-submit', text: '✒ ' + t('submit'), onclick: askSubmit }));
+  }
+  function renderHint() {
+    var el = $('#hint'), txt = '';
+    if (S.phase === 'play') {
+      if (S.mode === 'ruler') txt = t('rulerHint');
+      else if (S.mode === 'draw' && S.activePath) txt = t('drawHint', { name: loc(S.level.paths.filter(function (p) { return p.id === S.activePath; })[0].name) });
+      else if (S.armed) txt = t('armHint', { name: loc(placeById(S.armed).name) });
+    }
+    el.style.display = txt ? 'block' : 'none'; el.textContent = txt;
+    var lg = $('#maplegend');
+    if (S.phase === 'result') {
+      lg.style.display = 'flex'; clear(lg);
+      lg.appendChild(h('span', {}, [h('i', { style: 'border-color:#d9a93a;border-top-style:dashed' }), t('legendTruth')]));
+      lg.appendChild(h('span', {}, [h('i', { style: 'border-color:#6fa3c4' }), t('legendYours')]));
+    } else lg.style.display = 'none';
+  }
+
+  /* ───────────── panneau : outils ───────────── */
+  var lastPanelKey = null;
+  function renderPanel() {
+    var p = $('#panel'); if (!p || !S.level) return;
+    var key = S.phase === 'result' ? 'result' : S.panel + ':' + S.level.id, st = key === lastPanelKey ? p.scrollTop : 0;
+    lastPanelKey = key;
+    clear(p);
+    if (S.phase === 'result') renderResult(p);
+    else if (S.panel === 'notebook') renderNotebook(p);
+    else renderTools(p);
+    p.scrollTop = st;
+  }
+  function chipCanvas(type) {
+    var c = document.createElement('canvas'); c.width = c.height = 76;
+    Art.glyph(c.getContext('2d'), type, 38, 40, 29, '#cdb98c'); return c;
+  }
+  function renderTools(p) {
+    var L = S.level, pad = h('div', { class: 'pad gutter' });
+    pad.appendChild(h('h3', { text: t('stampsTitle') }));
+    if (!Object.keys(S.placed).length) pad.appendChild(h('p', { class: 'help', text: t('stampsHelp') }));
+    var chips = h('div', { class: 'chips' });
+    L.places.forEach(function (pl) {
+      var done = !!S.placed[pl.id];
+      var chip = h('div', { class: 'chip' + (done ? ' done' : '') + (S.armed === pl.id ? ' armed' : ''), role: 'button', tabindex: '0', 'data-id': pl.id,
+        'aria-label': loc(pl.name) + ' — ' + (done ? t('placed') : t('notPlaced')) }, [
+        chipCanvas(pl.type), h('span', { text: loc(pl.name) }), done ? h('b', { class: 'ck', text: '✓' }) : null
+      ]);
+      chip.addEventListener('pointerdown', function (e) { chipDown(e, pl); });
+      chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.armed = S.armed === pl.id ? null : pl.id; renderPanel(); renderHint(); } });
+      chips.appendChild(chip);
+    });
+    pad.appendChild(chips);
+
+    if (L.paths.length) {
+      pad.appendChild(h('h3', { text: t('pathsTitle') }));
+      if (!Object.keys(S.drawn).length) pad.appendChild(h('p', { class: 'help', text: t('pathsHelp') }));
+      var tg = h('div', { class: 'tools' });
+      L.paths.forEach(function (pa) {
+        var has = S.drawn[pa.id] && S.drawn[pa.id].length >= 2;
+        tg.appendChild(h('button', { class: 'tool' + (S.mode === 'draw' && S.activePath === pa.id ? ' on' : ''), 'data-path': pa.id, style: 'grid-column: span 2',
+          onclick: function () { if (S.mode === 'draw' && S.activePath === pa.id) { S.mode = 'move'; S.activePath = null; } else { S.mode = 'draw'; S.activePath = pa.id; } sfx('pick'); renderPanel(); renderHint(); } }, [
+          h('b', { text: '✏️' }), t('drawPath', { name: loc(pa.name) }) + ' · ' + (has ? t('drawn') : t('notDrawn'))
+        ]));
+        tg.appendChild(h('button', { class: 'tool', disabled: has ? null : true, 'data-erase': pa.id, onclick: function () { snap(); delete S.drawn[pa.id]; sfx('low'); changed(); } }, [h('b', { text: '🧽' }), t('eraseStroke')]));
+      });
+      pad.appendChild(tg);
+    }
+
+    pad.appendChild(h('h3', { text: t('toolsTitle') }));
+    var sel = S.selected && S.placed[S.selected] ? S.selected : null;
+    var tools = h('div', { class: 'tools' }, [
+      h('button', { class: 'tool' + (S.mode === 'move' ? ' on' : ''), id: 't-move', onclick: function () { S.mode = 'move'; S.activePath = null; renderPanel(); renderHint(); } }, [h('b', { text: '✋' }), t('move')]),
+      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: function () { S.mode = S.mode === 'ruler' ? 'move' : 'ruler'; S.activePath = null; S.armed = null; sfx('pick'); renderPanel(); renderHint(); } }, [h('b', { text: '📏' }), t('ruler')]),
+      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [h('b', { text: '👁' }), t('ghost')]),
+      h('button', { class: 'tool', id: 't-undo', disabled: S.undo.length ? null : true, onclick: undo }, [h('b', { text: '↶' }), t('undo')]),
+      h('button', { class: 'tool', id: 't-remove', disabled: sel ? null : true, onclick: function () { if (!sel) return; snap(); delete S.placed[sel]; S.selected = null; sfx('low'); changed(); } }, [h('b', { text: '🗑' }), t('removeStamp')]),
+      h('button', { class: 'tool', id: 't-fit', onclick: function () { fitView(); draw(); } }, [h('b', { text: '⌖' }), t('recenter')])
+    ]);
+    pad.appendChild(tools);
+    if (S.ghost) pad.appendChild(h('div', { class: 'legend' }, [
+      h('span', { text: '✓ ' + t('okMark') }), h('span', { text: '✗ ' + t('koMark') }), h('span', { text: '· ' + t('naMark') })
+    ]));
+    p.appendChild(pad);
+  }
+
+  /* ───────────── panneau : carnet ───────────── */
+  function badgeFor(status) {
+    if (status === 'ok') return h('span', { class: 'badge ok', title: t('statusOk'), 'aria-label': t('statusOk'), text: '✓' });
+    if (status === 'ko') return h('span', { class: 'badge ko', title: t('statusKo'), 'aria-label': t('statusKo') }, [h('i', { text: '✗' })]);
+    return h('span', { class: 'badge na', title: t('statusNa'), 'aria-label': t('statusNa'), text: '·' });
+  }
+  function stmtRow(e) {
+    var pinned = !!S.pins[e.key];
+    var tag = e.kind === 'reply' ? t('reply') : (e.kind === 'scout' ? t('scoutVerified') : null);
+    var txt = e.kind === 'reply' ? e.reply : e.st.text;
+    var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key }, [
+      h('div', { class: 'tx' }, [tag ? h('small', { text: tag }) : null, '« ' + loc(txt) + ' »']),
+      S.ghost ? badgeFor(evalEntry(e).status) : null,
+      h('button', { class: 'pinbtn' + (pinned ? ' on' : ''), 'aria-pressed': pinned ? 'true' : 'false', 'aria-label': pinned ? t('unpin') : t('pin'), text: pinned ? '★' : '☆',
+        onclick: function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); } })
+    ]);
+    return row;
+  }
+  function renderNotebook(p) {
+    var L = S.level, left = tokensLeft(), pad = h('div', { class: 'pad gutter' });
+    var tb = h('div', { class: 'tokenbar' }, [
+      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, text: '🔭 ' + t('scout', { n: left.scout }), onclick: useScout }),
+      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', text: '👁 ' + t('ghost'), onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } })
+    ]);
+    pad.appendChild(tb);
+    if (S.scoutsUsed) {
+      var sc = h('div', { class: 'card open' }, [
+        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', { text: '🔭 ' + t('scoutCardTitle') })].concat(
+          entries().filter(function (e) { return e.kind === 'scout'; }).map(stmtRow)))
+      ]);
+      pad.appendChild(sc);
+    }
+    L.witnesses.forEach(function (w) {
+      var open = S.openCard === w.id;
+      var ents = entries().filter(function (e) { return e.w && e.w.id === w.id; });
+      var card = h('div', { class: 'card' + (open ? ' open' : ''), 'data-w': w.id }, [
+        h('button', { class: 'card-h', style: 'display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit', 'aria-expanded': open ? 'true' : 'false',
+          onclick: function () { S.openCard = open ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [
+          h('span', { class: 'em', text: w.emoji }),
+          h('span', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', { text: loc(w.job) + (S.suspects[w.id] ? ' · ⚑ ' + t('suspected') : '') })]),
+          h('span', { class: 'chev', text: '›' })
+        ])
+      ]);
+      var inner = h('div', { class: 'inner' });
+      inner.appendChild(h('p', { class: 'trait', text: loc(w.trait) }));
+      ents.forEach(function (e) { inner.appendChild(stmtRow(e)); });
+      var asked = !!S.asked[w.id];
+      var canAsk = !asked && left.ask > 0;
+      inner.appendChild(h('div', { class: 'actions' }, [
+        h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, text: asked ? t('alreadyAsked') : (left.ask > 0 ? '❓ ' + t('ask', { n: left.ask }) : t('noToken')), onclick: function () { askWitness(w); } })
+      ]));
+      var lab = h('label', { class: 'check' }, [
+        h('input', { type: 'checkbox', 'data-suspect': w.id, checked: S.suspects[w.id] ? true : null, onchange: function (ev) { if (ev.target.checked) S.suspects[w.id] = true; else delete S.suspects[w.id]; sfx('pick'); persistProgress(); renderPanel(); } }),
+        h('span', { text: t('suspect') })
+      ]);
+      inner.appendChild(lab);
+      card.appendChild(inner);
+      pad.appendChild(card);
+    });
+    p.appendChild(pad);
+  }
+  function askWitness(w) {
+    var left = tokensLeft(); if (S.asked[w.id] || left.ask < 1 || !w.ask) return;
+    S.asked[w.id] = true; sfx('chime'); buzz(15);
+    S.pins[w.id + ':r'] = true;
+    persistProgress(); draw(); renderPanel(); tutCheck();
+  }
+  function useScout() {
+    var left = tokensLeft(); if (left.scout < 1) return;
+    S.scoutsUsed++; S.pins['scout:' + (S.scoutsUsed - 1)] = true; sfx('chime'); buzz(15);
+    persistProgress(); draw(); renderPanel(); tutCheck();
+  }
+
+  /* ───────────── tutoriel ───────────── */
+  var TUT_N = 6;
+  function tutDone(step) {
+    if (!S.tut) return false;
+    switch (step) {
+      case 1: return S.openCard === 'odo';
+      case 2: return !!S.placed.moulin_haut;
+      case 3: return !!S.placed.moulin_haut;
+      case 4: return S.rulerUsed;
+      case 5: return Object.keys(S.asked).length > 0;
+      default: return false;
+    }
+  }
+  function tutCheck() {
+    if (!S.tut || S.phase !== 'play') return;
+    var moved = false;
+    while (S.tut && S.tut.step < TUT_N && tutDone(S.tut.step)) { S.tut.step++; moved = true; }
+    if (moved) sfx('pick');
+    renderTut();
+  }
+  function tutEnd() { S.tut = null; save.tutDone = true; persist(); renderTut(); }
+  function renderTut() {
+    var el = $('#tut'); if (!el) return; clear(el);
+    if (!S.tut || S.phase !== 'play') { el.classList.remove('on'); return; }
+    var step = S.tut.step, last = step >= TUT_N;
+    el.classList.add('on');
+    el.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step, n: TUT_N }) }), t('tut' + step)]));
+    el.appendChild(h('button', { class: 'skip', text: t('tutSkip'), onclick: tutEnd }));
+    el.appendChild(h('button', { id: 'tut-next', text: last ? t('tutDone') : t('tutNext'), onclick: function () { if (last) tutEnd(); else { S.tut.step++; renderTut(); } } }));
+  }
+
+  /* ───────────── remise & résultat ───────────── */
+  function missingCount() {
+    var L = S.level, n = 0;
+    L.places.forEach(function (p) { if (!S.placed[p.id]) n++; });
+    L.paths.forEach(function (p) { if (!(S.drawn[p.id] && S.drawn[p.id].length >= 2)) n++; });
+    return n;
+  }
+  function askSubmit() {
+    if (S.phase !== 'play') return;
+    var miss = missingCount();
+    modal([
+      h('h2', { text: t('confirm') }),
+      h('p', { text: miss ? t('missing', { n: miss }) : t('completeSure') }),
+      h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn', id: 'btn-notyet', text: t('notYet'), onclick: closeModal }),
+        h('button', { class: 'btn primary', id: 'btn-confirm', text: t('handIn'), onclick: function () { closeModal(); doSubmit(); } })
+      ])
+    ]);
+  }
+  function doSubmit() {
+    var L = S.level;
+    var sc = Core.score(L, S.placed, S.drawn);
+    var stars = Core.stars(sc.score, L, S.suspects);
+    var prev = save.progress[L.id], isBest = !prev || sc.score > prev.score;
+    var thumb = makeThumb();
+    var entry = prev ? clone(prev) : { score: 0, stars: 0, noScout: false, thumb: null };
+    if (isBest) { entry.score = sc.score; if (thumb) entry.thumb = thumb; }
+    entry.stars = Math.max(entry.stars, stars);
+    if (S.scoutsUsed === 0 && stars >= 1) entry.noScout = true;
+    save.progress[L.id] = entry;
+    if (stars >= 1) save.notes[L.id] = true;
+    delete save.inprogress[L.id];
+    persist();
+    S.result = { sc: sc, stars: stars, isBest: isBest && !!prev, noScout: S.scoutsUsed === 0 };
+    S.phase = 'result'; S.mode = 'move'; S.armed = null; S.selected = null; S.ruler = null; S.tut = null;
+    sfx('chime'); buzz([30, 40, 30]);
+    fitView(); renderAll();
+  }
+  function renderResult(p) {
+    var L = S.level, R = S.result, sc = R.sc, pad = h('div', { class: 'pad gutter', id: 'result' });
+    pad.appendChild(h('h3', { text: t('resultTitle') }));
+    var stars = h('div', { class: 'stars', 'aria-label': t('stars', { n: R.stars }) });
+    for (var i = 0; i < 3; i++) stars.appendChild(h('span', { class: i < R.stars ? '' : 'off', text: '★' }));
+    pad.appendChild(stars);
+    var okCount = 0, placeTotal = L.places.length;
+    sc.items.forEach(function (it) { if (it.kind === 'place' && it.verdict === 'ok') okCount++; });
+    pad.appendChild(h('div', { class: 'scoreline', id: 'scoreline', text: t('result', { s: String(sc.score).replace('.', I.lang === 'fr' ? ',' : '.'), ok: okCount, t: placeTotal }) }));
+    if (R.isBest) pad.appendChild(h('div', { class: 'scoreline', style: 'color:var(--brass)', text: t('newBest') }));
+    if (R.noScout && R.stars >= 1) pad.appendChild(h('div', { class: 'scoreline', style: 'font-size:.9em;color:var(--muted)', text: '🔭✗ ' + t('noScoutBadge') }));
+    if (sc.score >= 95 && R.stars < 3) pad.appendChild(h('p', { class: 'help', text: t('thirdStarNeed') }));
+
+    if (L.faulty.length) {
+      pad.appendChild(h('h3', { text: t('liarsTitle') }));
+      L.faulty.forEach(function (id) {
+        var w = L.witnesses.filter(function (x) { return x.id === id; })[0];
+        pad.appendChild(h('div', { class: 'liar' }, [
+          h('b', { text: w.emoji + ' ' + loc(w.name) }), ' — ', h('span', { text: S.suspects[id] ? '⚑ ' + t('unmasked') : t('unnoticed') }),
+          h('div', { style: 'margin-top:6px', text: t('liar', { name: loc(w.name), motif: loc(w.why) }) })
+        ]));
+      });
+      L.witnesses.forEach(function (w) {
+        if (S.suspects[w.id] && L.faulty.indexOf(w.id) < 0) pad.appendChild(h('p', { class: 'help', text: t('falseSuspect', { name: loc(w.name) }) }));
+      });
+    }
+    if (R.stars >= 1) pad.appendChild(h('div', { class: 'orlan' }, [h('small', { text: t('orlanNote', { n: L.id }) }), '« ' + loc(L.note) + ' »']));
+    pad.appendChild(h('p', { class: 'help', style: 'font-style:italic', text: loc(L.outro) }));
+
+    pad.appendChild(h('button', { class: 'linkbtn', id: 'btn-detail', text: S.detailOpen ? t('detailHide') : t('detailShow'), onclick: function () { S.detailOpen = !S.detailOpen; renderPanel(); } }));
+    if (S.detailOpen) {
+      var box = h('div');
+      sc.items.forEach(function (it) {
+        var name, vlab, vcls = it.verdict;
+        if (it.kind === 'place') name = loc(placeById(it.id).name); else name = loc(L.paths.filter(function (x) { return x.id === it.id; })[0].name);
+        vlab = it.err == null ? t('vMissing') : (it.verdict === 'ok' ? t('vOk') : (it.verdict === 'near' ? t('vNear') : t('vKo')));
+        box.appendChild(h('div', { class: 'row' }, [
+          h('span', { class: 'nm', text: name }),
+          it.err != null && it.kind === 'place' ? h('span', { class: 'sc', text: t('gap', { d: I.days(it.err / L.scale).replace(/ .*/, '') }) }) : null,
+          h('span', { class: 'verd ' + vcls, text: (it.verdict === 'ok' ? '✓ ' : it.verdict === 'near' ? '~ ' : '✗ ') + vlab })
+        ]));
+      });
+      pad.appendChild(box);
+    }
+    if (!LEVELS[S.levelIdx + 1]) pad.appendChild(h('p', { class: 'help', text: t('endOfV0') }));
+    pad.appendChild(h('button', { class: 'btn', id: 'btn-export', text: '🖼 ' + t('export_'), onclick: exportPNG }));
+    p.appendChild(pad);
+  }
+
+  /* ───────────── export & vignette ───────────── */
+  function fitFor(W, H, ratio) { var s0 = Math.min(W, H) * (ratio || .9) / 100; return { z: 1, s0: s0, ox: (W - 100 * s0) / 2, oy: (H - 100 * s0) / 2 }; }
+  function makeThumb() {
+    try {
+      var c = document.createElement('canvas'); c.width = c.height = 168;
+      var x = c.getContext('2d'); paint(x, 168, 168, fitFor(168, 168, .86), { u: .5, thumb: true });
+      return c.toDataURL('image/jpeg', .6);
+    } catch (e) { return null; }
+  }
+  function exportPNG() {
+    try {
+      var W = 1080, H = 1300, c = document.createElement('canvas'); c.width = W; c.height = H;
+      var x = c.getContext('2d'); x.fillStyle = '#15242c'; x.fillRect(0, 0, W, H);
+      var m = document.createElement('canvas'); m.width = W; m.height = W;
+      paint(m.getContext('2d'), W, W, fitFor(W, W, .88), { u: 2.3, result: S.result });
+      x.drawImage(m, 0, 0);
+      x.fillStyle = '#eadfc0'; x.textAlign = 'center'; x.font = '54px ' + FONT;
+      x.fillText(loc(S.level.title), W / 2, W + 62);
+      x.fillStyle = '#d2a94b'; x.font = '44px ' + FONT;
+      var st = ''; for (var i = 0; i < 3; i++) st += i < S.result.stars ? '★' : '☆';
+      x.fillText(st + '  ' + String(S.result.sc.score).replace('.', I.lang === 'fr' ? ',' : '.') + ' %', W / 2, W + 124);
+      x.fillStyle = '#a9b9b4'; x.font = '30px ' + FONT; x.fillText('Keismey Studio · ' + t('title'), W / 2, W + 176);
+      var url = c.toDataURL('image/png');
+      modal([
+        h('h2', { text: t('exportTitle') }),
+        h('img', { src: url, alt: '', style: 'width:100%;border-radius:6px;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default' }),
+        h('p', { class: 'help', text: t('holdToSave') }),
+        h('div', { class: 'btnrow' }, [
+          h('a', { class: 'btn', href: url, download: 'cartographe-' + S.level.id + '.png', style: 'text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center', text: t('download') }),
+          h('button', { class: 'btn primary', text: t('close'), onclick: closeModal })
+        ])
+      ]);
+    } catch (e) { toast(t('exportFail')); }
+  }
+
+  /* ───────────── réglages ───────────── */
+  function applySettings() {
+    var s = save.settings;
+    I.set(s.lang || 'fr'); document.documentElement.lang = I.lang;
+    document.documentElement.style.setProperty('--fs', [1, 1.15, 1.3][s.textSize] || 1);
+    document.documentElement.setAttribute('data-cb', s.cb ? '1' : '0');
+    document.title = t('title'); readColors();
+  }
+  function refreshUI() {
+    applySettings(); buildTitle();
+    if (S.screen === 'atlas') renderAtlas();
+    if (S.screen === 'game' && S.level) renderAll();
+    if (S.screen === 'briefing') openBriefing(S.levelIdx);
+  }
+  function seg(opts, cur, on) {
+    return h('div', { class: 'seg' }, opts.map(function (o) { return h('button', { class: 'btn' + (String(cur) === String(o[0]) ? ' on' : ''), text: o[1], onclick: function () { on(o[0]); } }); }));
+  }
+  function openSettings() {
+    var s = save.settings;
+    modal([
+      h('h2', { text: t('settingsTitle') }),
+      h('div', { class: 'setrow' }, [h('span', { text: t('lang') }), seg([['fr', 'Français'], ['en', 'English']], I.lang, function (v) { s.lang = v; persist(); refreshUI(); openSettings(); })]),
+      h('div', { class: 'setrow' }, [h('span', { text: t('textSize') }), seg([[0, 'A'], [1, 'A+'], [2, 'A++']], s.textSize, function (v) { s.textSize = +v; persist(); refreshUI(); openSettings(); })]),
+      h('div', { class: 'setrow' }, [h('span', { text: t('colorblind') }), seg([['0', t('off')], ['1', t('on')]], s.cb ? '1' : '0', function (v) { s.cb = v === '1'; persist(); refreshUI(); openSettings(); })]),
+      h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
+      h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
+      h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn', id: 'btn-saveio', text: t('exportSave') + ' / ' + t('importSave'), onclick: openSaveIO }),
+        h('button', { class: 'btn', id: 'btn-reset', text: t('reset'), onclick: openReset })
+      ]),
+      h('p', { class: 'help', text: t('about') }),
+      h('button', { class: 'btn primary', id: 'btn-close', text: t('close'), onclick: closeModal })
+    ]);
+  }
+  function openSaveIO() {
+    var ta = h('textarea', { id: 'save-text', 'aria-label': t('saveText') });
+    ta.value = JSON.stringify(save);
+    modal([
+      h('h2', { text: t('exportSave') + ' / ' + t('importSave') }),
+      h('p', { class: 'help', text: t('saveText') }),
+      ta,
+      h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn', text: t('copy'), onclick: function () { try { navigator.clipboard.writeText(ta.value).then(function () { toast(t('copied')); }, function () { ta.select(); }); } catch (e) { ta.select(); } } }),
+        h('button', { class: 'btn', text: t('importBtn'), onclick: function () {
+          try { var o = JSON.parse(ta.value); if (!o || typeof o !== 'object' || !o.v) throw 0; save = deepMerge(defaultSave(), o); persist(); closeModal(); refreshUI(); toast(t('savedOk')); }
+          catch (e) { toast(t('importFail')); } } })
+      ]),
+      h('button', { class: 'btn primary', text: t('close'), onclick: openSettings })
+    ]);
+  }
+  function openReset() {
+    modal([
+      h('h2', { text: t('reset') }),
+      h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn', text: t('notYet'), onclick: openSettings }),
+        h('button', { class: 'btn primary', id: 'btn-reset-yes', text: t('resetYes'), onclick: function () {
+          var lang = save.settings; save = defaultSave(); save.settings = lang; try { localStorage.removeItem(KEY); } catch (e) {} persist(); S.level = null; closeModal(); buildTitle(); go('title'); } })
+      ])
+    ]);
+  }
+
+  /* ───────────── vue (zoom / déplacement) ───────────── */
+  function SC() { return view.s0 * view.z; }
+  function w2s(p) { return { x: view.ox + p.x * SC(), y: view.oy + (100 - p.y) * SC() }; }
+  function s2w(x, y) { return { x: (x - view.ox) / SC(), y: 100 - (y - view.oy) / SC() }; }
+  function fitView() { view = fitFor(cw || 360, ch || 360, .86); }
+  function clampView() {
+    var s = SC(), size = 100 * s, m;
+    if (size <= cw) view.ox = (cw - size) / 2; else { m = cw * .12; view.ox = clamp(view.ox, cw - size - m, m); }
+    if (size <= ch) view.oy = (ch - size) / 2; else { m = ch * .12; view.oy = clamp(view.oy, ch - size - m, m); }
+  }
+  function zoomAt(px, py, f) {
+    var w = s2w(px, py); view.z = clamp(view.z * f, 1, 3.6);
+    var s = SC(); view.ox = px - w.x * s; view.oy = py - (100 - w.y) * s; clampView(); draw();
+  }
+
+  /* ───────────── rendu du parchemin ───────────── */
+  var dirty = false;
+  function draw() { if (dirty) return; dirty = true; requestAnimationFrame(function () { dirty = false; if (!cx || !S.level || S.screen !== 'game') return; cx.setTransform(dpr, 0, 0, dpr, 0, 0); paint(cx, cw, ch, view, { u: 1, interactive: true, result: S.phase === 'result' ? S.result : null }); }); }
+
+  function mark(c, x, y, status, u) {
+    var r = 9 * u; c.save(); c.lineWidth = 2 * u;
+    if (status === 'ok') { c.fillStyle = COL.ok; c.beginPath(); c.arc(x, y, r, 0, 6.3); c.fill(); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(x - r * .5, y); c.lineTo(x - r * .1, y + r * .45); c.lineTo(x + r * .55, y - r * .4); c.stroke(); }
+    else if (status === 'ko') { c.fillStyle = COL.ko; c.beginPath(); c.moveTo(x, y - r * 1.15); c.lineTo(x + r * 1.15, y); c.lineTo(x, y + r * 1.15); c.lineTo(x - r * 1.15, y); c.closePath(); c.fill(); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(x - r * .4, y - r * .4); c.lineTo(x + r * .4, y + r * .4); c.moveTo(x + r * .4, y - r * .4); c.lineTo(x - r * .4, y + r * .4); c.stroke(); }
+    else if (status === 'near') { c.fillStyle = COL.near; c.beginPath(); c.moveTo(x, y - r * 1.1); c.lineTo(x + r * 1.05, y + r * .8); c.lineTo(x - r * 1.05, y + r * .8); c.closePath(); c.fill(); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(x - r * .45, y + r * .2); c.quadraticCurveTo(x - r * .2, y - r * .25, x, y + r * .15); c.quadraticCurveTo(x + r * .2, y + r * .5, x + r * .45, y); c.stroke(); }
+    else { c.fillStyle = 'rgba(70,55,35,.6)'; c.beginPath(); c.arc(x, y, r * .45, 0, 6.3); c.fill(); }
+    c.restore();
+  }
+  function statusColor(s) { return s === 'ok' ? COL.ok : (s === 'ko' ? COL.ko : 'rgba(70,55,35,.55)'); }
+
+  function stamp(c, x, y, pl, o) {
+    var R = o.R; c.save(); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
+    c.fillStyle = o.ghost ? 'rgba(241,231,200,.55)' : '#f1e7c8'; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill();
+    c.lineWidth = Math.max(1.5, R * .09); c.strokeStyle = o.ghost ? '#b5851c' : Art.INK;
+    if (o.ghost) c.setLineDash([R * .3, R * .25]);
+    c.stroke(); c.setLineDash([]);
+    if (o.selected) { c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R + 3, 0, 6.3); c.stroke(); }
+    Art.glyph(c, pl.type, x, y + R * .04, R * .68, '#cdb98c');
+    c.restore();
+    function label() {
+      c.save(); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
+      var fs = Math.max(11, R * .78); c.font = 'italic ' + fs + 'px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'top';
+      var name = loc(pl.name), ty = y + R + 3;
+      c.lineJoin = 'round'; c.lineWidth = fs * .38; c.strokeStyle = 'rgba(238,226,190,.92)'; c.strokeText(name, x, ty);
+      c.fillStyle = o.ghost ? '#8a6212' : '#2f2314'; c.fillText(name, x, ty);
+      c.restore();
+    }
+    if (o.q) o.q.push(label); else label();
+  }
+
+  function wedge(c, g, B, cap, tol, r1, r2, col, status) {
+    var p = g.P(B), a1 = -(Core.CAPS[cap] + tol) * Math.PI / 180, a2 = -(Core.CAPS[cap] - tol) * Math.PI / 180;
+    c.save(); c.globalAlpha = status === 'na' ? .2 : .15; c.fillStyle = col;
+    c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, a1, a2); if (r1 > 0) c.arc(p.x, p.y, r1 * g.sc, a2, a1, true); else c.lineTo(p.x, p.y); c.closePath(); c.fill();
+    c.globalAlpha = .55; c.lineWidth = 1.5 * g.u; c.setLineDash([5 * g.u, 4 * g.u]); c.strokeStyle = col; c.stroke(); c.restore();
+  }
+  function ringAt(c, g, B, r1, r2, col, status) {
+    var p = g.P(B); c.save(); c.globalAlpha = status === 'na' ? .22 : .16; c.fillStyle = col;
+    c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, 0, 6.3); if (r1 > 0) c.arc(p.x, p.y, r1 * g.sc, 6.3, 0, true); c.fill();
+    c.globalAlpha = .55; c.lineWidth = 1.5 * g.u; c.setLineDash([5 * g.u, 4 * g.u]); c.strokeStyle = col; c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, 0, 6.3); c.stroke(); c.restore();
+  }
+  function arrow(c, a, b, u) {
+    var ang = Math.atan2(b.y - a.y, b.x - a.x), L = 9 * u;
+    c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(b.x - L * Math.cos(ang - .4), b.y - L * Math.sin(ang - .4)); c.moveTo(b.x, b.y); c.lineTo(b.x - L * Math.cos(ang + .4), b.y - L * Math.sin(ang + .4)); c.stroke();
+  }
+  function ghostFor(c, g, e) {
+    var st = e.st, r = evalEntry(e), col = statusColor(r.status), u = g.u, P = g.P;
+    var bias = st.exact ? 1 : ((e.w && e.w.bias && e.w.bias.dist) || 1), scale = S.level.scale;
+    c.save(); c.lineWidth = 3 * u; c.strokeStyle = col; c.fillStyle = col; c.lineCap = 'round';
+    function line(A, B) {
+      var a = P(A), b = P(B);
+      c.save(); c.setLineDash(r.status === 'ok' ? [] : (r.status === 'ko' ? [2 * u, 7 * u] : [8 * u, 6 * u]));
+      c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); c.setLineDash([]); c.restore();
+      return { a: a, b: b };
+    }
+    if (st.k === 'rel') {
+      var A = S.placed[st.a], B = S.placed[st.b];
+      if (B) {
+        var claimed = st.j != null ? st.j / bias : null, tol = st.tolRel || (st.approx ? .3 : .25), ang = st.angTol || 35;
+        var r1 = 0, r2 = 60;
+        if (claimed != null) { if (st.jmin) { r1 = claimed * .9 * scale; r2 = 70; } else { r1 = claimed * (1 - tol) * scale; r2 = claimed * (1 + tol) * scale; } }
+        if (st.cap) wedge(c, g, B, st.cap, ang, r1, r2, col, r.status);
+        else if (claimed != null) ringAt(c, g, B, r1, r2, col, r.status);
+        if (st.near && !st.cap) ringAt(c, g, B, 0, st.r || 18, col, r.status);
+        if (st.near && st.cap) { /* cône déjà dessiné */ }
+      }
+      if (A && B) { var s = line(B, A); arrow(c, s.a, s.b, u); mark(c, (s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2, r.status, u); }
+    } else if (st.k === 'cross') {
+      var poly = S.drawn[st.path];
+      if (poly && poly.length > 1) (Array.isArray(st.a) ? st.a : [st.a]).forEach(function (id) {
+        var pp = S.placed[id]; if (!pp) return;
+        var q = Core.polyClosest(pp, poly), rr = st.r || 6, ok = q.d <= rr;
+        var s = line(pp, { x: q.x, y: q.y }); mark(c, (s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2, ok ? 'ok' : 'ko', u);
+      });
+    } else if (st.k === 'side') {
+      var poly2 = S.drawn[st.path], P1 = S.placed[st.a];
+      if (poly2 && poly2.length > 1 && P1) { var q2 = Core.polyClosest(P1, poly2); var s2 = line(P1, { x: q2.x, y: q2.y }); mark(c, (s2.a.x + s2.b.x) / 2, (s2.a.y + s2.b.y) / 2, r.status, u); }
+    } else if (st.k === 'opp') {
+      var A2 = S.placed[st.a], B2 = S.placed[st.b];
+      if (A2 && B2 && S.drawn[st.path]) { var s3 = line(A2, B2); mark(c, (s3.a.x + s3.b.x) / 2, (s3.a.y + s3.b.y) / 2, r.status, u); }
+    } else if (st.k === 'between') {
+      var a3 = S.placed[st.a], b3 = S.placed[st.b], c3 = S.placed[st.c];
+      if (b3 && c3) { line(b3, c3); }
+      if (a3) { var pa = P(a3); mark(c, pa.x, pa.y - 26 * u, r.status, u); }
+    } else {
+      Core.needs(st).places.forEach(function (id) { if (S.placed[id]) { var pa2 = P(S.placed[id]); mark(c, pa2.x, pa2.y - 26 * u, r.status, u); } });
+    }
+    c.restore();
+  }
+
+  function paint(c, W, H, V, o) {
+    var L = S.level; if (!L) return;
+    var u = o.u || 1, sc = V.s0 * V.z;
+    function X(wx) { return V.ox + wx * sc; } function Y(wy) { return V.oy + (100 - wy) * sc; }
+    function P(p) { return { x: X(p.x), y: Y(p.y) }; }
+    var g = { P: P, sc: sc, u: u };
+    c.save(); c.fillStyle = '#1b150f'; c.fillRect(0, 0, W, H);
+    var pad = 7, x0 = X(-pad), y0 = Y(100 + pad), sz = (100 + 2 * pad) * sc;
+    c.drawImage(Art.parchment(), x0, y0, sz, sz);
+    c.strokeStyle = 'rgba(50,34,12,.6)'; c.lineWidth = 2 * u; c.strokeRect(x0, y0, sz, sz);
+    /* cadre gradué */
+    var ink = 'rgba(58,44,28,.8)', fx = X(0), fy = Y(100), fs = 100 * sc;
+    c.strokeStyle = ink; c.lineWidth = 1.6 * u; c.strokeRect(fx, fy, fs, fs);
+    c.lineWidth = 1 * u; c.strokeRect(fx - 3 * u, fy - 3 * u, fs + 6 * u, fs + 6 * u);
+    var i;
+    for (i = 5; i < 100; i += 5) {
+      var tl = (i % 20 === 0 ? 2.2 : (i % 10 === 0 ? 1.5 : .9)) * sc * .6 + 2 * u;
+      c.beginPath();
+      c.moveTo(X(i), fy); c.lineTo(X(i), fy + tl); c.moveTo(X(i), fy + fs); c.lineTo(X(i), fy + fs - tl);
+      c.moveTo(fx, Y(i)); c.lineTo(fx + tl, Y(i)); c.moveTo(fx + fs, Y(i)); c.lineTo(fx + fs - tl, Y(i)); c.stroke();
+    }
+    /* quadrillage léger, 1 journée */
+    c.save(); c.strokeStyle = 'rgba(90,66,30,.10)'; c.lineWidth = 1 * u; c.setLineDash([2 * u, 6 * u]);
+    for (i = 20; i < 100; i += 20) { c.beginPath(); c.moveTo(X(i), fy); c.lineTo(X(i), fy + fs); c.moveTo(fx, Y(i)); c.lineTo(fx + fs, Y(i)); c.stroke(); }
+    c.restore();
+    /* titre, échelle, rose */
+    c.fillStyle = ink; c.font = 'italic ' + Math.max(11, 4.6 * sc * .8) * 1 + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText(loc(L.title), fx, Y(103.5));
+    var sy = Y(-3.6), sx0 = X(0), sx1 = X(L.scale);
+    c.lineWidth = 2 * u; c.beginPath(); c.moveTo(sx0, sy); c.lineTo(sx1, sy); c.moveTo(sx0, sy - 4 * u); c.lineTo(sx0, sy + 4 * u); c.moveTo(sx1, sy - 4 * u); c.lineTo(sx1, sy + 4 * u); c.stroke();
+    c.font = 'italic ' + Math.max(10, 3.4 * sc * .8) + 'px ' + FONT; c.fillText('= ' + t('oneDay'), sx1 + 6 * u, sy);
+    Art.rose(c, X(91.5), Y(9), Math.max(13 * u, 5.2 * sc), 'rgba(58,44,28,.7)');
+
+    /* tracés */
+    function drawRiver(pts, alpha, dashed, tint) {
+      var sp = pts.map(P); c.save(); c.globalAlpha = alpha; c.lineJoin = 'round'; c.lineCap = 'round';
+      if (dashed) { c.strokeStyle = '#b5851c'; c.lineWidth = Math.max(4 * u, 1.3 * sc); c.setLineDash([9 * u, 7 * u]); Art.smooth(c, sp); c.stroke(); }
+      else { c.strokeStyle = tint ? '#2c5675' : '#2c5675'; c.lineWidth = Math.max(5 * u, 1.9 * sc); Art.smooth(c, sp); c.stroke(); c.strokeStyle = '#78acce'; c.lineWidth = Math.max(2.6 * u, .95 * sc); Art.smooth(c, sp); c.stroke(); }
+      c.restore();
+    }
+    function pathLabel(pa, pts) {
+      var mid = pts[Math.floor(pts.length / 2)], pp = P(mid); c.save(); c.font = 'italic ' + Math.max(11, 3.6 * sc * .8) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
+      c.lineWidth = 4 * u; c.strokeStyle = 'rgba(238,226,190,.9)'; c.strokeText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.fillStyle = '#244a66'; c.fillText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.restore();
+    }
+    var R = o.result;
+    L.paths.forEach(function (pa) {
+      if (R) {
+        drawRiver(Core.toPts(pa.truth), .95, true);
+        var it = R.sc.items.filter(function (x) { return x.id === pa.id && x.kind === 'path'; })[0];
+        if (it && it.at) { drawRiver(it.at, .55, false); }
+      } else {
+        var pts = S.drawn[pa.id];
+        var cur = G && G.type === 'draw' && G.path === pa.id ? G.pts : null;
+        if (cur && cur.length > 1) drawRiver(cur, .6, false);
+        else if (pts && pts.length > 1) { drawRiver(pts, 1, false); if (!o.thumb) pathLabel(pa, pts); }
+      }
+    });
+
+    /* indices */
+    if (!R && S.ghost && o.interactive) shownEntries().forEach(function (e) { ghostFor(c, g, e); });
+
+    /* tampons */
+    var Q = [], Rr = clamp(sc * 5.2, 14, 25) * (o.u || 1);
+    if (o.thumb) Rr = clamp(sc * 5.4, 6, 14);
+    if (R) {
+      R.sc.items.forEach(function (it) {
+        if (it.kind !== 'place') return;
+        var pl = placeById(it.id), tp = P({ x: pl.truth[0], y: pl.truth[1] });
+        if (it.at) {
+          var ap = P(it.at);
+          c.save(); c.strokeStyle = it.verdict === 'ok' ? COL.ok : (it.verdict === 'near' ? COL.near : COL.ko); c.lineWidth = 2.5 * u; c.setLineDash([4 * u, 4 * u]);
+          c.beginPath(); c.moveTo(ap.x, ap.y); c.lineTo(tp.x, tp.y); c.stroke(); c.restore();
+          stamp(c, tp.x, tp.y, pl, { R: Rr, ghost: true, alpha: .8, q: Q });
+          stamp(c, ap.x, ap.y, pl, { R: Rr, alpha: .95, q: Q });
+          mark(c, ap.x + Rr * .85, ap.y - Rr * .85, it.verdict, u * 1.1);
+        } else { stamp(c, tp.x, tp.y, pl, { R: Rr, ghost: true, alpha: .8, q: Q }); mark(c, tp.x + Rr * .85, tp.y - Rr * .85, 'ko', u * 1.1); }
+      });
+    } else {
+      L.places.forEach(function (pl) {
+        if (S.selected === pl.id) return; var pp = S.placed[pl.id]; if (!pp) return; var s = P(pp);
+        stamp(c, s.x, s.y, pl, { R: Rr, q: Q });
+      });
+      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q }); }
+    }
+
+    Q.forEach(function (f) { f(); });
+
+    /* règle */
+    if (!R && S.ruler && o.interactive) {
+      var ra = P(S.ruler.a), rb = P(S.ruler.b), d = Core.dist(S.ruler.a, S.ruler.b) / L.scale;
+      c.save(); c.strokeStyle = '#7a2a1c'; c.lineWidth = 3 * u; c.setLineDash([9 * u, 5 * u]); c.beginPath(); c.moveTo(ra.x, ra.y); c.lineTo(rb.x, rb.y); c.stroke(); c.setLineDash([]);
+      c.fillStyle = '#7a2a1c'; [ra, rb].forEach(function (q) { c.beginPath(); c.arc(q.x, q.y, 5 * u, 0, 6.3); c.fill(); });
+      var br = Core.bearing(S.ruler.a, S.ruler.b), best = 'E', bd = 999; for (var k in Core.CAPS) { var dd = Core.angDiff(br, Core.CAPS[k]); if (dd < bd) { bd = dd; best = k; } }
+      var lab = I.caps()[best] + ' · ' + I.days(d), mx = (ra.x + rb.x) / 2, my = (ra.y + rb.y) / 2;
+      c.font = 'bold ' + 14 * u + 'px ' + FONT; var tw = c.measureText(lab).width + 14 * u;
+      c.fillStyle = '#f4ead0'; c.strokeStyle = '#7a2a1c'; c.lineWidth = 1.5 * u; c.beginPath(); if (c.roundRect) c.roundRect(mx - tw / 2, my - 14 * u, tw, 28 * u, 6 * u); else c.rect(mx - tw / 2, my - 14 * u, tw, 28 * u); c.fill(); c.stroke();
+      c.fillStyle = '#4a1a10'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lab, mx, my + 1); c.restore();
+    }
+    /* vignette */
+    if (!o.thumb) {
+      var vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
+    }
+    c.restore();
+  }
+
+  /* ───────────── interactions sur la carte ───────────── */
+  var G = null;               /* geste en cours */
+  var pointers = {};          /* pointerId → {x,y} */
+  var pinch = null;
+  function pos(e) { var r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  function hitStamp(p) {
+    var L = S.level, best = null, bd = 30;
+    for (var i = L.places.length - 1; i >= 0; i--) {
+      var pl = L.places[i], q = S.placed[pl.id]; if (!q) continue;
+      var s = w2s(q), d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; best = pl.id; }
+    }
+    return best;
+  }
+  function snapToStamp(w) {
+    var p = w2s(w), best = null, bd = 26;
+    S.level.places.forEach(function (pl) { var q = S.placed[pl.id]; if (!q) return; var s = w2s(q), d = Math.hypot(s.x - p.x, s.y - p.y); if (d < bd) { bd = d; best = q; } });
+    return best ? { x: best.x, y: best.y } : w;
+  }
+  function cancelGesture() {
+    if (G && G.type === 'stamp' && G.start) { S.placed[G.id] = G.start; }
+    if (G && G.type === 'stamp' && G.wasNew) { delete S.placed[G.id]; }
+    G = null;
+  }
+  function bindMap() {
+    cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    cv.addEventListener('wheel', function (e) { e.preventDefault(); var p = pos(e); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+    cv.addEventListener('pointerdown', function (e) {
+      if (!S.level) return; audio();
+      try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      var p = pos(e); pointers[e.pointerId] = p;
+      var ids = Object.keys(pointers);
+      if (ids.length === 2) {
+        cancelGesture();
+        var a = pointers[ids[0]], b = pointers[ids[1]], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: view.z, w: s2w(mid.x, mid.y) };
+        draw(); return;
+      }
+      if (ids.length > 2) return;
+      var touch = e.pointerType !== 'mouse';
+      if (S.phase === 'result') { G = { type: 'pan', last: p }; return; }
+      if (S.mode === 'ruler') {
+        var w = snapToStamp(s2w(p.x, p.y)); G = { type: 'ruler', a: w }; S.ruler = { a: w, b: w }; draw(); return;
+      }
+      if (S.mode === 'draw' && S.activePath) { var w2 = s2w(p.x, p.y); G = { type: 'draw', path: S.activePath, pts: [w2], raw: p }; draw(); return; }
+      var hit = hitStamp(p);
+      if (hit) {
+        S.selected = hit; var cur = S.placed[hit], sp = w2s(cur);
+        G = { type: 'stamp', id: hit, start: clone(cur), moved: false, dx: sp.x - p.x, dy: sp.y - p.y, touch: touch, sx: p.x, sy: p.y };
+        renderPanel(); draw(); return;
+      }
+      if (S.armed) { G = { type: 'armtap', sx: p.x, sy: p.y, moved: false }; return; }
+      if (S.selected) { S.selected = null; renderPanel(); draw(); }
+      G = { type: 'pan', last: p };
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!pointers[e.pointerId]) return;
+      var p = pos(e); pointers[e.pointerId] = p;
+      var ids = Object.keys(pointers);
+      if (ids.length === 2 && pinch) {
+        var a = pointers[ids[0]], b = pointers[ids[1]], mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        view.z = clamp(pinch.z0 * d / pinch.d0, 1, 3.6);
+        var s = SC(); view.ox = mid.x - pinch.w.x * s; view.oy = mid.y - (100 - pinch.w.y) * s; clampView(); draw(); return;
+      }
+      if (!G) return;
+      if (G.type === 'pan') { if (SC() > view.s0 * 1.001) { view.ox += p.x - G.last.x; view.oy += p.y - G.last.y; clampView(); draw(); } G.last = p; }
+      else if (G.type === 'ruler') { var w = snapToStamp(s2w(p.x, p.y)); S.ruler = { a: G.a, b: w }; draw(); }
+      else if (G.type === 'draw') {
+        var wp = s2w(p.x, p.y), last = G.pts[G.pts.length - 1];
+        if (Math.hypot(wp.x - last.x, wp.y - last.y) > .5 / Math.max(1, view.z * .6)) { G.pts.push({ x: clamp(wp.x, -3, 103), y: clamp(wp.y, -3, 103) }); draw(); }
+      }
+      else if (G.type === 'stamp') {
+        if (!G.moved && Math.hypot(p.x - G.sx, p.y - G.sy) > 5) { G.moved = true; snap(); }
+        if (G.moved) {
+          var lift = G.touch ? 30 : 0, w3 = s2w(p.x + G.dx, p.y + G.dy - lift);
+          S.placed[G.id] = { x: clamp(w3.x, 0, 100), y: clamp(w3.y, 0, 100) }; draw();
+        }
+      }
+      else if (G.type === 'armtap') { if (Math.hypot(p.x - G.sx, p.y - G.sy) > 8) G.moved = true; }
+    });
+    function end(e) {
+      if (!pointers[e.pointerId]) return;
+      var p = pos(e); delete pointers[e.pointerId];
+      if (pinch) { if (Object.keys(pointers).length < 2) { pinch = null; G = null; } return; }
+      if (!G) return;
+      var g = G; G = null;
+      if (g.type === 'ruler') { var d = Core.dist(S.ruler.a, S.ruler.b); if (d < 1) S.ruler = null; else S.rulerUsed = true; draw(); tutCheck(); }
+      else if (g.type === 'draw') {
+        var pts = g.pts, len = 0; for (var i = 1; i < pts.length; i++) len += Core.dist(pts[i - 1], pts[i]);
+        if (pts.length >= 2 && len > 6) { snap(); S.drawn[g.path] = Core.simplify(pts, .7); sfx('draw'); buzz(8); changed(); } else draw();
+      }
+      else if (g.type === 'stamp') {
+        if (g.moved) {
+          var r = cv.getBoundingClientRect(), out = p.x < -10 || p.y < -10 || p.x > r.width + 10 || p.y > r.height + 10;
+          if (out) { delete S.placed[g.id]; S.selected = null; sfx('low'); } else { sfx('stamp'); buzz(12); }
+          changed();
+        } else { draw(); renderPanel(); }
+      }
+      else if (g.type === 'armtap' && !g.moved) {
+        var w = s2w(p.x, p.y); placeAt(S.armed, w);
+      }
+    }
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', function (e) { delete pointers[e.pointerId]; if (G && G.type === 'stamp') { S.placed[G.id] = G.start; } G = null; pinch = null; draw(); });
+  }
+  function placeAt(id, w) {
+    snap(); S.placed[id] = { x: clamp(w.x, 0, 100), y: clamp(w.y, 0, 100) }; S.armed = null; S.selected = id;
+    sfx('stamp'); buzz(12); changed();
+  }
+
+  /* glisser depuis la palette */
+  function chipDown(e, pl) {
+    if (S.phase !== 'play') return;
+    e.preventDefault(); audio();
+    var gh = $('#dragghost'), st = { sx: e.clientX, sy: e.clientY, moved: false, pid: e.pointerId }, touch = e.pointerType !== 'mouse', lift = touch ? 34 : 0;
+    clear(gh); var cc = chipCanvas(pl.type); cc.style.cssText = 'width:54px;height:54px;background:#f1e7c8;border:2px solid #3a2c1c;border-radius:50%'; gh.appendChild(cc);
+    function mv(ev) {
+      if (ev.pointerId !== st.pid) return;
+      if (!st.moved && Math.hypot(ev.clientX - st.sx, ev.clientY - st.sy) > 8) { st.moved = true; gh.classList.add('on'); }
+      if (st.moved) { gh.style.left = ev.clientX + 'px'; gh.style.top = (ev.clientY - lift) + 'px'; }
+    }
+    function up(ev) {
+      if (ev.pointerId !== st.pid) return;
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      gh.classList.remove('on');
+      if (st.moved) {
+        var r = cv.getBoundingClientRect(), gx = ev.clientX, gy = ev.clientY - lift;
+        if (ev.type !== 'pointercancel' && gx >= r.left && gx <= r.right && gy >= r.top && gy <= r.bottom) placeAt(pl.id, s2w(gx - r.left, gy - r.top));
+        else if (S.placed[pl.id] && ev.type !== 'pointercancel') { /* lâché hors carte : le tampon retourne à la palette */ snap(); delete S.placed[pl.id]; S.selected = null; sfx('low'); changed(); }
+      } else {
+        if (S.placed[pl.id]) { S.selected = pl.id; sfx('pick'); renderPanel(); draw(); }
+        else { S.armed = S.armed === pl.id ? null : pl.id; sfx('pick'); renderPanel(); renderHint(); }
+      }
+    }
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  }
+
+  /* ───────────── démarrage ───────────── */
+  function boot() {
+    var app = $('#app');
+    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
+    if (!save.settings.lang) save.settings.lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
+    applySettings(); buildTitle(); buildGame(); go('title');
+    $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
+    window.__cart = { S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script></body></html>
