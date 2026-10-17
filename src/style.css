@@ -61,6 +61,10 @@ a.btn { color: var(--text); }
     repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
     repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
     var(--night); }
+#title.art { background-size: cover; background-position: center bottom; justify-content: flex-start; padding-top: 9vh; }
+#title.art h1 { text-shadow: 0 2px 14px rgba(0,0,0,.7); }
+#title.art p.tag { color: #e4d6ae; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+#title.art .stack { margin-top: auto; margin-bottom: 9vh; }
 #title .rose { width: 108px; height: 108px; opacity: .9; }
 #title h1 { font-size: clamp(2.2rem, 11vw, 3.6rem); letter-spacing: .02em; color: var(--paper); }
 #title p.tag { margin: 0; max-width: 22ch; color: var(--muted); font-size: 1.08em; }
@@ -113,7 +117,7 @@ h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
 #bar .btn.active { background: var(--night-3); border-color: var(--brass); color: var(--paper); }
 #bar .btn.seal { flex: 1.35; }
 .mapfloat { position: absolute; display: flex; gap: 6px; }
-.mapfloat.tr { top: 8px; right: 8px; }
+.mapfloat.tr { top: 8px; right: 8px; flex-direction: column; }
 .mapfloat.bl { bottom: 8px; left: 8px; }
 .mapfloat button { min-width: 44px; min-height: 44px; border-radius: 22px; background: rgba(21,36,44,.82); border: 1px solid var(--line); color: var(--text); cursor: pointer; padding: 0 12px; font-weight: 700; }
 .mapfloat button.on { border-color: var(--brass); color: var(--brass); }
@@ -219,3 +223,28 @@ h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
 @media (max-height: 640px) and (max-aspect-ratio: 5/4) { #mapwrap { max-height: 36vh; } }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- illustrations ---------- */
+img.ico { width: 1.25em; height: 1.25em; object-fit: contain; vertical-align: -.25em; pointer-events: none; }
+img.ico.sm { width: 1.5em; height: 1.5em; }
+img.ico.xs { width: 1.2em; height: 1.2em; }
+img.ico.big { width: 1em; height: 1em; }
+.tool b img.ico { width: 1.7em; height: 1.7em; }
+.stars { display: flex; justify-content: center; gap: .14em; font-size: 2.6em; line-height: 1; }
+.stars img.ico.big { width: 1.15em; height: 1.15em; }
+.starsrow { display: inline-flex; gap: 2px; align-items: center; }
+.starsrow img.ico { width: 1.05em; height: 1.05em; }
+.chip img { width: 50px; height: 42px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 1px 1px rgba(60,40,10,.35)); }
+.chip.done img { opacity: .4; }
+img.portrait { object-fit: cover; border-radius: 50%; border: 2px solid var(--brass); background: var(--paper); flex: none; pointer-events: none; }
+img.portrait.card { width: 46px; height: 46px; }
+img.portrait.sm { width: 34px; height: 34px; vertical-align: middle; margin-right: 6px; }
+img.portrait.xs { width: 26px; height: 26px; border-width: 1px; }
+.liar b { vertical-align: middle; }
+#briefing img.scene { display: block; width: 100%; border-radius: 4px; margin-bottom: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+#briefing .parch { position: relative; }
+#briefing img.king { float: right; width: 74px; height: 74px; margin: -6px -6px 6px 10px; border-radius: 50%; border: 2px solid #8a6a2a; object-fit: cover; background: #efe5c8; }
+#ribbon { position: absolute; left: 8px; right: 60px; top: 8px; display: none; flex-direction: column; gap: 4px; pointer-events: none; max-height: 46%; overflow: hidden; }
+#ribbon .rb { pointer-events: auto; display: flex; align-items: center; gap: 8px; text-align: left; min-height: 34px; padding: 4px 8px; border: 1px solid #8a6a2a; border-radius: 6px; background: rgba(244,234,208,.93); color: #2f2314; font-family: var(--font-display); font-size: .86em; line-height: 1.2; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+#ribbon .rb span { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#ribbon .rb i { font-style: normal; font-weight: 800; color: #7a6342; padding: 0 2px; }

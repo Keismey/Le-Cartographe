@@ -26,7 +26,7 @@
       pathsTitle: 'Tracés', pathsHelp: 'Choisissez un tracé, puis dessinez au doigt. Un nouveau trait remplace l’ancien.',
       placed: 'posé', notPlaced: 'à poser', drawn: 'tracé', notDrawn: 'à tracer',
       rulerHint: 'Glissez d’un point à un autre pour mesurer.', drawHint: 'Dessinez au doigt : {name}.',
-      toolsTitle: 'Outils', ghostLegend: 'Tracé net = respecté · pointillé = brisé',
+      toolsTitle: 'Outils', ghostLegend: 'Zones décrites par les indices affichés (à vous de juger)',
       ghostOn: 'Indices affichés', ghostOff: 'Indices masqués',
       okMark: 'respecté', koMark: 'brisé', naMark: 'pas encore posé',
 
@@ -92,7 +92,7 @@
       pathsTitle: 'Strokes', pathsHelp: 'Pick a stroke, then draw with your finger. A new stroke replaces the old one.',
       placed: 'placed', notPlaced: 'to place', drawn: 'drawn', notDrawn: 'to draw',
       rulerHint: 'Drag from one point to another to measure.', drawHint: 'Draw with your finger: {name}.',
-      toolsTitle: 'Tools', ghostLegend: 'Solid = respected · dotted = broken',
+      toolsTitle: 'Tools', ghostLegend: 'Areas described by the clues shown (you be the judge)',
       ghostOn: 'Clues shown', ghostOff: 'Clues hidden',
       okMark: 'respected', koMark: 'broken', naMark: 'not placed yet',
 

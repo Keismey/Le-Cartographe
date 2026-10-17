@@ -134,6 +134,8 @@ Levels.forEach(function (L) {
   for (i3 = 0; i3 < 6; i3++) cent.push(solveScore(true, 500 + i3));
   cent.sort(function (a, b) { return a - b; });
   console.log('  score d\'une carte faisable au hasard : min ' + feas[0] + ' · médiane ' + feas[6] + ' · max ' + feas[11] + ' %  (tracés supposés bons)');
+  ok(feas[6] >= 90, 'cartes faisables : médiane trop basse (' + feas[6] + ' < 90) — niveau sous-déterminé');
+  ok(feas[1] >= 80, 'cartes faisables : 10e centile trop bas (' + feas[1] + ' < 80) — niveau sous-déterminé');
   console.log('  score d\'une carte « centrée » (moyenne des témoignages) : min ' + cent[0] + ' · médiane ' + cent[3] + ' · max ' + cent[5] + ' %');
 });
 

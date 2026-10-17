@@ -159,7 +159,22 @@
     }
   }
 
-  var Art = { INK: INK, glyph: glyph, parchment: parchment, rose: rose, smooth: smooth, rng: rng };
+  /* Images embarquées (window.ASSETS, généré par assets/process.py) */
+  var cache = {};
+  function asset(path) {
+    var A = root.ASSETS; if (!A) return null;
+    return path.split('.').reduce(function (o, k) { return o && o[k]; }, A) || null;
+  }
+  function src(path) { var v = asset(path); return v ? (typeof v === 'string' ? v : v.src) : null; }
+  function img(path) {
+    if (cache[path]) return cache[path];
+    var s = src(path); if (!s || typeof Image === 'undefined') return null;
+    var im = new Image(); im.onload = function () { im._ok = true; if (Art.onload) Art.onload(); }; im.src = s; cache[path] = im;
+    return im;
+  }
+  function preload() { var A = root.ASSETS; if (!A) return; ['stamps', 'ui', 'portraits'].forEach(function (g) { Object.keys(A[g] || {}).forEach(function (k) { img(g + '.' + k); }); }); img('parchment'); }
+
+  var Art = { asset: asset, src: src, img: img, preload: preload, INK: INK, glyph: glyph, parchment: parchment, rose: rose, smooth: smooth, rng: rng };
   if (typeof module !== 'undefined' && module.exports) module.exports = Art;
   else root.Art = Art;
 })(typeof window !== 'undefined' ? window : globalThis);

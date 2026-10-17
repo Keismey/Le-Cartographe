@@ -112,8 +112,8 @@
   function buildTitle() {
     var el = $('#title'); clear(el);
     var has = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0;
-    var r = h('div'); r.innerHTML = roseSvg();
-    el.appendChild(r.firstChild);
+    var tt = Art.src('title'); if (tt) { el.style.backgroundImage = 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%),url(' + tt + ')'; el.classList.add('art'); }
+    else { var r = h('div'); r.innerHTML = roseSvg(); el.appendChild(r.firstChild); }
     el.appendChild(h('h1', { text: t('title') }));
     el.appendChild(h('p', { class: 'tag', text: t('tagline') }));
     el.appendChild(h('div', { class: 'stack' }, [
@@ -126,7 +126,13 @@
 
   /* ───────────── atlas ───────────── */
   function unlocked(idx) { if (idx === 0) return true; var p = save.progress[LEVELS[idx - 1].id]; return !!(p && p.stars >= 1); }
-  function starsText(n) { var s = h('span', { class: 'starsrow', 'aria-label': t('stars', { n: n }) }); for (var i = 0; i < 3; i++) s.appendChild(h('span', { class: i < n ? '' : 'off', text: '★' })); return s; }
+  function ico(name, cls) { var s = Art.src('ui.' + name); return s ? h('img', { class: 'ico' + (cls ? ' ' + cls : ''), src: s, alt: '', draggable: 'false' }) : null; }
+  function starImgs(n, cls) { var a = []; for (var i = 0; i < 3; i++) a.push(ico(i < n ? 'etoile' : 'etoile_vide', cls) || h('span', { class: i < n ? '' : 'off', text: '★' })); return a; }
+  function portrait(w, cls) {
+    var s = Art.src('portraits.' + w.id);
+    return s ? h('img', { class: 'portrait ' + (cls || ''), src: s, alt: '', draggable: 'false' }) : h('span', { class: 'em', text: w.emoji });
+  }
+  function starsText(n) { var s = h('span', { class: 'starsrow', 'aria-label': t('stars', { n: n }) }); starImgs(n).forEach(function (x) { s.appendChild(x); }); return s; }
   function renderAtlas() {
     var el = $('#atlas'); clear(el);
     el.appendChild(h('div', { class: 'topbar gutter' }, [
@@ -138,7 +144,7 @@
     body.appendChild(h('p', { class: 'lead', text: t('atlasText') }));
     LEVELS.forEach(function (L, i) {
       var open = unlocked(i), p = save.progress[L.id], inprog = !!save.inprogress[L.id];
-      var th = p && p.thumb ? h('img', { class: 'thumb', src: p.thumb, alt: '' }) : h('div', { class: 'thumb', text: String(L.id) });
+      var th = p && p.thumb ? h('img', { class: 'thumb', src: p.thumb, alt: '' }) : (Art.src('scenes.' + L.scene) ? h('img', { class: 'thumb', src: Art.src('scenes.' + L.scene), alt: '' }) : h('div', { class: 'thumb', text: String(L.id) }));
       var btn = h('button', { class: 'region', disabled: open ? null : true, id: 'region-' + L.id, onclick: function () { audio(); openBriefing(i); } }, [
         th,
         h('div', { class: 'meta' }, [
@@ -171,7 +177,9 @@
     var el = $('#briefing'); clear(el);
     el.className = 'screen gutter';
     el.appendChild(h('div', { class: 'scroll-card' }, [
+      Art.src('scenes.' + (L.scene || '')) ? h('img', { class: 'scene', src: Art.src('scenes.' + L.scene), alt: '' }) : null,
       h('div', { class: 'parch' }, [
+        Art.src('portraits.roi') ? h('img', { class: 'king', src: Art.src('portraits.roi'), alt: '' }) : null,
         h('span', { class: 'rg', text: t('region', { n: L.id }) }),
         h('h2', { text: loc(L.title) }),
         loc(L.king),
@@ -253,6 +261,7 @@
         h('button', { id: 'z-out', 'aria-label': t('zoomOut'), text: '−', onclick: function () { zoomAt(cw / 2, ch / 2, 1 / 1.3); } }),
         h('button', { id: 'z-fit', 'aria-label': t('recenter'), text: '⌖', onclick: function () { fitView(); draw(); } })
       ]),
+      h('div', { id: 'ribbon' }),
       h('div', { id: 'hint', class: 'maphint', style: 'display:none' }),
       h('div', { id: 'maplegend', class: 'maplegend', style: 'display:none' })
     ]);
@@ -271,7 +280,21 @@
     var nw = Math.round(r.width), nh = Math.round(r.height); dpr = Math.min(window.devicePixelRatio || 1, 3);
     if (nw !== cw || nh !== ch) { cw = nw; ch = nh; cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); fitView(); }
   }
-  function renderAll() { renderTop(); renderBar(); renderPanel(); renderHint(); renderTut(); readColors(); draw(); }
+  function renderAll() { renderTop(); renderBar(); renderPanel(); renderHint(); renderRibbon(); renderTut(); readColors(); draw(); }
+  /* Bandeau : les indices épinglés restent lisibles pendant qu'on place les tampons */
+  function renderRibbon() {
+    var el = $('#ribbon'); if (!el) return; clear(el);
+    if (S.phase !== 'play' || !S.level) { el.style.display = 'none'; return; }
+    var pinned = entries().filter(function (e) { return S.pins[e.key]; });
+    if (!pinned.length) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    pinned.forEach(function (e) {
+      var txt = e.kind === 'reply' ? e.reply : e.st.text;
+      el.appendChild(h('button', { class: 'rb', 'aria-label': t('unpin'), onclick: function () { delete S.pins[e.key]; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); } }, [
+        e.w && e.w.id ? portrait(e.w, 'xs') : (ico('jeton_eclaireur', 'xs') || null), h('span', { text: loc(txt) }), h('i', { text: '×' })
+      ]));
+    });
+  }
   function renderTop() {
     if (!S.level) return;
     $('#g-title').textContent = S.level.id + ' · ' + loc(S.level.title);
@@ -317,6 +340,10 @@
     else renderTools(p);
     p.scrollTop = st;
   }
+  function chipImage(type) {
+    var s = Art.src('stamps.' + type); if (s) return h('img', { src: s, alt: '', draggable: 'false' });
+    return chipCanvas(type);
+  }
   function chipCanvas(type) {
     var c = document.createElement('canvas'); c.width = c.height = 76;
     Art.glyph(c.getContext('2d'), type, 38, 40, 29, '#cdb98c'); return c;
@@ -330,7 +357,7 @@
       var done = !!S.placed[pl.id];
       var chip = h('div', { class: 'chip' + (done ? ' done' : '') + (S.armed === pl.id ? ' armed' : ''), role: 'button', tabindex: '0', 'data-id': pl.id,
         'aria-label': loc(pl.name) + ' — ' + (done ? t('placed') : t('notPlaced')) }, [
-        chipCanvas(pl.type), h('span', { text: loc(pl.name) }), done ? h('b', { class: 'ck', text: '✓' }) : null
+        chipImage(pl.type), h('span', { text: loc(pl.name) }), done ? h('b', { class: 'ck', text: '✓' }) : null
       ]);
       chip.addEventListener('pointerdown', function (e) { chipDown(e, pl); });
       chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.armed = S.armed === pl.id ? null : pl.id; renderPanel(); renderHint(); } });
@@ -346,9 +373,9 @@
         var has = S.drawn[pa.id] && S.drawn[pa.id].length >= 2;
         tg.appendChild(h('button', { class: 'tool' + (S.mode === 'draw' && S.activePath === pa.id ? ' on' : ''), 'data-path': pa.id, style: 'grid-column: span 2',
           onclick: function () { if (S.mode === 'draw' && S.activePath === pa.id) { S.mode = 'move'; S.activePath = null; } else { S.mode = 'draw'; S.activePath = pa.id; } sfx('pick'); renderPanel(); renderHint(); } }, [
-          h('b', { text: '✏️' }), t('drawPath', { name: loc(pa.name) }) + ' · ' + (has ? t('drawn') : t('notDrawn'))
+          h('b', {}, [ico('plume') || '✏️']), t('drawPath', { name: loc(pa.name) }) + ' · ' + (has ? t('drawn') : t('notDrawn'))
         ]));
-        tg.appendChild(h('button', { class: 'tool', disabled: has ? null : true, 'data-erase': pa.id, onclick: function () { snap(); delete S.drawn[pa.id]; sfx('low'); changed(); } }, [h('b', { text: '🧽' }), t('eraseStroke')]));
+        tg.appendChild(h('button', { class: 'tool', disabled: has ? null : true, 'data-erase': pa.id, onclick: function () { snap(); delete S.drawn[pa.id]; sfx('low'); changed(); } }, [h('b', {}, [ico('eponge') || '🧽']), t('eraseStroke')]));
       });
       pad.appendChild(tg);
     }
@@ -357,16 +384,14 @@
     var sel = S.selected && S.placed[S.selected] ? S.selected : null;
     var tools = h('div', { class: 'tools' }, [
       h('button', { class: 'tool' + (S.mode === 'move' ? ' on' : ''), id: 't-move', onclick: function () { S.mode = 'move'; S.activePath = null; renderPanel(); renderHint(); } }, [h('b', { text: '✋' }), t('move')]),
-      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: function () { S.mode = S.mode === 'ruler' ? 'move' : 'ruler'; S.activePath = null; S.armed = null; sfx('pick'); renderPanel(); renderHint(); } }, [h('b', { text: '📏' }), t('ruler')]),
-      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [h('b', { text: '👁' }), t('ghost')]),
+      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: function () { S.mode = S.mode === 'ruler' ? 'move' : 'ruler'; S.activePath = null; S.armed = null; sfx('pick'); renderPanel(); renderHint(); } }, [h('b', {}, [ico('regle') || '📏']), t('ruler')]),
+      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [h('b', {}, [ico('loupe') || '👁']), t('ghost')]),
       h('button', { class: 'tool', id: 't-undo', disabled: S.undo.length ? null : true, onclick: undo }, [h('b', { text: '↶' }), t('undo')]),
       h('button', { class: 'tool', id: 't-remove', disabled: sel ? null : true, onclick: function () { if (!sel) return; snap(); delete S.placed[sel]; S.selected = null; sfx('low'); changed(); } }, [h('b', { text: '🗑' }), t('removeStamp')]),
       h('button', { class: 'tool', id: 't-fit', onclick: function () { fitView(); draw(); } }, [h('b', { text: '⌖' }), t('recenter')])
     ]);
     pad.appendChild(tools);
-    if (S.ghost) pad.appendChild(h('div', { class: 'legend' }, [
-      h('span', { text: '✓ ' + t('okMark') }), h('span', { text: '✗ ' + t('koMark') }), h('span', { text: '· ' + t('naMark') })
-    ]));
+    if (S.ghost) pad.appendChild(h('div', { class: 'legend' }, [h('span', { text: t('ghostLegend') })]));
     p.appendChild(pad);
   }
 
@@ -382,22 +407,21 @@
     var txt = e.kind === 'reply' ? e.reply : e.st.text;
     var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key }, [
       h('div', { class: 'tx' }, [tag ? h('small', { text: tag }) : null, '« ' + loc(txt) + ' »']),
-      S.ghost ? badgeFor(evalEntry(e).status) : null,
       h('button', { class: 'pinbtn' + (pinned ? ' on' : ''), 'aria-pressed': pinned ? 'true' : 'false', 'aria-label': pinned ? t('unpin') : t('pin'), text: pinned ? '★' : '☆',
-        onclick: function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); } })
+        onclick: function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); } })
     ]);
     return row;
   }
   function renderNotebook(p) {
     var L = S.level, left = tokensLeft(), pad = h('div', { class: 'pad gutter' });
     var tb = h('div', { class: 'tokenbar' }, [
-      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, text: '🔭 ' + t('scout', { n: left.scout }), onclick: useScout }),
-      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', text: '👁 ' + t('ghost'), onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } })
+      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, onclick: useScout }, [ico('jeton_eclaireur', 'sm') || '🔭', ' ' + t('scout', { n: left.scout })]),
+      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [ico('loupe', 'sm') || '👁', ' ' + t('ghost')])
     ]);
     pad.appendChild(tb);
     if (S.scoutsUsed) {
       var sc = h('div', { class: 'card open' }, [
-        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', { text: '🔭 ' + t('scoutCardTitle') })].concat(
+        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm') || '🔭', ' ' + t('scoutCardTitle')])].concat(
           entries().filter(function (e) { return e.kind === 'scout'; }).map(stmtRow)))
       ]);
       pad.appendChild(sc);
@@ -408,7 +432,7 @@
       var card = h('div', { class: 'card' + (open ? ' open' : ''), 'data-w': w.id }, [
         h('button', { class: 'card-h', style: 'display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit', 'aria-expanded': open ? 'true' : 'false',
           onclick: function () { S.openCard = open ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [
-          h('span', { class: 'em', text: w.emoji }),
+          portrait(w, 'card'),
           h('span', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', { text: loc(w.job) + (S.suspects[w.id] ? ' · ⚑ ' + t('suspected') : '') })]),
           h('span', { class: 'chev', text: '›' })
         ])
@@ -419,7 +443,7 @@
       var asked = !!S.asked[w.id];
       var canAsk = !asked && left.ask > 0;
       inner.appendChild(h('div', { class: 'actions' }, [
-        h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, text: asked ? t('alreadyAsked') : (left.ask > 0 ? '❓ ' + t('ask', { n: left.ask }) : t('noToken')), onclick: function () { askWitness(w); } })
+        h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, onclick: function () { askWitness(w); } }, [!asked && left.ask > 0 ? ico('jeton_question', 'sm') : null, ' ' + (asked ? t('alreadyAsked') : (left.ask > 0 ? t('ask', { n: left.ask }) : t('noToken')))])
       ]));
       var lab = h('label', { class: 'check' }, [
         h('input', { type: 'checkbox', 'data-suspect': w.id, checked: S.suspects[w.id] ? true : null, onchange: function (ev) { if (ev.target.checked) S.suspects[w.id] = true; else delete S.suspects[w.id]; sfx('pick'); persistProgress(); renderPanel(); } }),
@@ -516,7 +540,7 @@
     var L = S.level, R = S.result, sc = R.sc, pad = h('div', { class: 'pad gutter', id: 'result' });
     pad.appendChild(h('h3', { text: t('resultTitle') }));
     var stars = h('div', { class: 'stars', 'aria-label': t('stars', { n: R.stars }) });
-    for (var i = 0; i < 3; i++) stars.appendChild(h('span', { class: i < R.stars ? '' : 'off', text: '★' }));
+    starImgs(R.stars, 'big').forEach(function (x) { stars.appendChild(x); });
     pad.appendChild(stars);
     var okCount = 0, placeTotal = L.places.length;
     sc.items.forEach(function (it) { if (it.kind === 'place' && it.verdict === 'ok') okCount++; });
@@ -530,7 +554,7 @@
       L.faulty.forEach(function (id) {
         var w = L.witnesses.filter(function (x) { return x.id === id; })[0];
         pad.appendChild(h('div', { class: 'liar' }, [
-          h('b', { text: w.emoji + ' ' + loc(w.name) }), ' — ', h('span', { text: S.suspects[id] ? '⚑ ' + t('unmasked') : t('unnoticed') }),
+          portrait(w, 'sm'), h('b', { text: ' ' + loc(w.name) }), ' — ', h('span', { text: S.suspects[id] ? '⚑ ' + t('unmasked') : t('unnoticed') }),
           h('div', { style: 'margin-top:6px', text: t('liar', { name: loc(w.name), motif: loc(w.why) }) })
         ]));
       });
@@ -674,7 +698,7 @@
 
   /* ───────────── rendu du parchemin ───────────── */
   var dirty = false;
-  function draw() { if (dirty) return; dirty = true; requestAnimationFrame(function () { dirty = false; if (!cx || !S.level || S.screen !== 'game') return; cx.setTransform(dpr, 0, 0, dpr, 0, 0); paint(cx, cw, ch, view, { u: 1, interactive: true, result: S.phase === 'result' ? S.result : null }); }); }
+  function draw() { if (dirty) return; dirty = true; requestAnimationFrame(function () { dirty = false; if (!cx || !S.level || S.screen !== 'game') return; animating = false; cx.setTransform(dpr, 0, 0, dpr, 0, 0); paint(cx, cw, ch, view, { u: 1, interactive: true, result: S.phase === 'result' ? S.result : null }); if (animating) draw(); }); }
 
   function mark(c, x, y, status, u) {
     var r = 9 * u; c.save(); c.lineWidth = 2 * u;
@@ -686,34 +710,71 @@
   }
   function statusColor(s) { return s === 'ok' ? COL.ok : (s === 'ko' ? COL.ko : 'rgba(70,55,35,.55)'); }
 
+  /* Tampon : sprite illustré, ombre, point d'ancrage exact (le centre du sprite) */
+  var animating = false;
+  function popScale(id) {
+    var t0 = S.pop && S.pop[id]; if (!t0) return 1;
+    var k = (performance.now() - t0) / 420;
+    if (k >= 1) { delete S.pop[id]; return 1; }
+    animating = true;
+    var e = 1 - Math.pow(1 - k, 3);                     /* ease-out */
+    return 1 + (1 - e) * .55 * Math.cos(k * 5.5);       /* léger rebond */
+  }
   function stamp(c, x, y, pl, o) {
-    var R = o.R; c.save(); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
-    c.fillStyle = o.ghost ? 'rgba(241,231,200,.55)' : '#f1e7c8'; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill();
-    c.lineWidth = Math.max(1.5, R * .09); c.strokeStyle = o.ghost ? '#b5851c' : Art.INK;
-    if (o.ghost) c.setLineDash([R * .3, R * .25]);
-    c.stroke(); c.setLineDash([]);
-    if (o.selected) { c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R + 3, 0, 6.3); c.stroke(); }
-    Art.glyph(c, pl.type, x, y + R * .04, R * .68, '#cdb98c');
-    c.restore();
-    function label() {
-      c.save(); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
-      var fs = Math.max(11, R * .78); c.font = 'italic ' + fs + 'px ' + FONT; c.textAlign = 'center'; c.textBaseline = 'top';
-      var name = loc(pl.name), ty = y + R + 3;
-      c.lineJoin = 'round'; c.lineWidth = fs * .38; c.strokeStyle = 'rgba(238,226,190,.92)'; c.strokeText(name, x, ty);
-      c.fillStyle = o.ghost ? '#8a6212' : '#2f2314'; c.fillText(name, x, ty);
-      c.restore();
+    var R = o.R, im = Art.img('stamps.' + pl.type), meta = Art.asset('stamps.' + pl.type), k = o.pop || 1;
+    c.save(); c.globalAlpha = o.alpha == null ? 1 : o.alpha;
+    if (im && im._ok && meta) {
+      var sz = R * 3.2 * k, m = Math.max(meta.w, meta.h), w = meta.w / m * sz, hh = meta.h / m * sz;
+      if (!o.ghost) { c.fillStyle = 'rgba(40,26,8,.22)'; c.beginPath(); c.ellipse(x + 1, y + hh * .36, w * .42, hh * .13, 0, 0, 6.3); c.fill(); }
+      if (o.ghost) c.globalAlpha *= .72;
+      c.drawImage(im, x - w / 2, y - hh / 2, w, hh);
+      c.globalAlpha = o.alpha == null ? 1 : o.alpha;
+      c.fillStyle = o.ghost ? '#b5851c' : '#8a2f1d'; c.strokeStyle = '#f4ead0'; c.lineWidth = Math.max(1, R * .07);
+      c.beginPath(); c.arc(x, y, Math.max(2.5, R * .13), 0, 6.3); c.fill(); c.stroke();
+    } else {
+      c.fillStyle = o.ghost ? 'rgba(241,231,200,.55)' : '#f1e7c8'; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill();
+      c.lineWidth = Math.max(1.5, R * .09); c.strokeStyle = o.ghost ? '#b5851c' : Art.INK;
+      if (o.ghost) c.setLineDash([R * .3, R * .25]);
+      c.stroke(); c.setLineDash([]);
+      Art.glyph(c, pl.type, x, y + R * .04, R * .68, '#cdb98c');
     }
-    if (o.q) o.q.push(label); else label();
+    if (o.selected) { c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R * 1.45, 0, 6.3); c.stroke(); }
+    c.restore();
+    if (o.q) o.q.push({ x: x, y: y, R: R, pl: pl, ghost: o.ghost, alpha: o.alpha == null ? 1 : o.alpha });
+  }
+  /* Étiquettes : on essaie dessous, dessus, à droite, à gauche, et on évite tampons et autres étiquettes */
+  function layoutLabels(c, Q, W, H) {
+    var placed = [], blocks = Q.map(function (q) { return { x: q.x - q.R * 1.3, y: q.y - q.R * 1.3, w: q.R * 2.6, h: q.R * 2.6 }; });
+    function hit(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+    Q.forEach(function (q) {
+      var fs = Math.max(11, q.R * .78), name = loc(q.pl.name);
+      c.font = 'italic ' + fs + 'px ' + FONT; var tw = c.measureText(name).width, th = fs * 1.15, g = q.R * 1.35 + 2;
+      var cands = [
+        { x: q.x - tw / 2, y: q.y + g, a: 'center' }, { x: q.x - tw / 2, y: q.y - g - th, a: 'center' },
+        { x: q.x + q.R * 1.5, y: q.y - th / 2, a: 'left' }, { x: q.x - q.R * 1.5 - tw, y: q.y - th / 2, a: 'left' }
+      ], pick = cands[0], i;
+      for (i = 0; i < cands.length; i++) {
+        var r = { x: cands[i].x - 2, y: cands[i].y - 1, w: tw + 4, h: th + 2 }, bad = r.x < 2 || r.y < 2 || r.x + r.w > W - 2 || r.y + r.h > H - 2;
+        for (var k = 0; k < placed.length && !bad; k++) if (hit(r, placed[k])) bad = true;
+        for (k = 0; k < blocks.length && !bad; k++) if (blocks[k].x !== q.x - q.R * 1.3 || blocks[k].y !== q.y - q.R * 1.3) { if (hit(r, blocks[k])) bad = true; }
+        if (!bad) { pick = cands[i]; break; }
+      }
+      placed.push({ x: pick.x - 2, y: pick.y - 1, w: tw + 4, h: th + 2 });
+      c.save(); c.globalAlpha = q.alpha; c.textAlign = 'left'; c.textBaseline = 'top';
+      c.lineJoin = 'round'; c.lineWidth = fs * .38; c.strokeStyle = 'rgba(238,226,190,.92)'; c.strokeText(name, pick.x, pick.y);
+      c.fillStyle = q.ghost ? '#8a6212' : '#2f2314'; c.fillText(name, pick.x, pick.y);
+      c.restore();
+    });
   }
 
   function wedge(c, g, B, cap, tol, r1, r2, col, status) {
     var p = g.P(B), a1 = -(Core.CAPS[cap] + tol) * Math.PI / 180, a2 = -(Core.CAPS[cap] - tol) * Math.PI / 180;
-    c.save(); c.globalAlpha = status === 'na' ? .2 : .15; c.fillStyle = col;
+    c.save(); c.globalAlpha = .16; c.fillStyle = col;
     c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, a1, a2); if (r1 > 0) c.arc(p.x, p.y, r1 * g.sc, a2, a1, true); else c.lineTo(p.x, p.y); c.closePath(); c.fill();
     c.globalAlpha = .55; c.lineWidth = 1.5 * g.u; c.setLineDash([5 * g.u, 4 * g.u]); c.strokeStyle = col; c.stroke(); c.restore();
   }
   function ringAt(c, g, B, r1, r2, col, status) {
-    var p = g.P(B); c.save(); c.globalAlpha = status === 'na' ? .22 : .16; c.fillStyle = col;
+    var p = g.P(B); c.save(); c.globalAlpha = .17; c.fillStyle = col;
     c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, 0, 6.3); if (r1 > 0) c.arc(p.x, p.y, r1 * g.sc, 6.3, 0, true); c.fill();
     c.globalAlpha = .55; c.lineWidth = 1.5 * g.u; c.setLineDash([5 * g.u, 4 * g.u]); c.strokeStyle = col; c.beginPath(); c.arc(p.x, p.y, r2 * g.sc, 0, 6.3); c.stroke(); c.restore();
   }
@@ -722,12 +783,12 @@
     c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(b.x - L * Math.cos(ang - .4), b.y - L * Math.sin(ang - .4)); c.moveTo(b.x, b.y); c.lineTo(b.x - L * Math.cos(ang + .4), b.y - L * Math.sin(ang + .4)); c.stroke();
   }
   function ghostFor(c, g, e) {
-    var st = e.st, r = evalEntry(e), col = statusColor(r.status), u = g.u, P = g.P;
+    var st = e.st, r = { status: 'na' }, col = '#8a5f10', u = g.u, P = g.P, mark = function () {};
     var bias = st.exact ? 1 : ((e.w && e.w.bias && e.w.bias.dist) || 1), scale = S.level.scale;
     c.save(); c.lineWidth = 3 * u; c.strokeStyle = col; c.fillStyle = col; c.lineCap = 'round';
     function line(A, B) {
       var a = P(A), b = P(B);
-      c.save(); c.setLineDash(r.status === 'ok' ? [] : (r.status === 'ko' ? [2 * u, 7 * u] : [8 * u, 6 * u]));
+      c.save(); c.setLineDash([8 * u, 6 * u]);
       c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); c.setLineDash([]); c.restore();
       return { a: a, b: b };
     }
@@ -774,7 +835,8 @@
     var g = { P: P, sc: sc, u: u };
     c.save(); c.fillStyle = '#1b150f'; c.fillRect(0, 0, W, H);
     var pad = 7, x0 = X(-pad), y0 = Y(100 + pad), sz = (100 + 2 * pad) * sc;
-    c.drawImage(Art.parchment(), x0, y0, sz, sz);
+    var pim = Art.img('parchment');
+    if (pim && pim._ok) c.drawImage(pim, 20, 20, 984, 984, x0, y0, sz, sz); else c.drawImage(Art.parchment(), x0, y0, sz, sz);
     c.strokeStyle = 'rgba(50,34,12,.6)'; c.lineWidth = 2 * u; c.strokeRect(x0, y0, sz, sz);
     /* cadre gradué */
     var ink = 'rgba(58,44,28,.8)', fx = X(0), fy = Y(100), fs = 100 * sc;
@@ -846,12 +908,12 @@
     } else {
       L.places.forEach(function (pl) {
         if (S.selected === pl.id) return; var pp = S.placed[pl.id]; if (!pp) return; var s = P(pp);
-        stamp(c, s.x, s.y, pl, { R: Rr, q: Q });
+        stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: popScale(pl.id) });
       });
-      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q }); }
+      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q, pop: popScale(S.selected) }); }
     }
 
-    Q.forEach(function (f) { f(); });
+    layoutLabels(c, Q, W, H);
 
     /* règle */
     if (!R && S.ruler && o.interactive) {
@@ -979,6 +1041,7 @@
   }
   function placeAt(id, w) {
     snap(); S.placed[id] = { x: clamp(w.x, 0, 100), y: clamp(w.y, 0, 100) }; S.armed = null; S.selected = id;
+    S.pop = S.pop || {}; S.pop[id] = performance.now();
     sfx('stamp'); buzz(12); changed();
   }
 
@@ -1014,6 +1077,8 @@
     var app = $('#app');
     ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
     if (!save.settings.lang) save.settings.lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
+    Art.onload = function () { draw(); };
+    Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
     window.__cart = { S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };

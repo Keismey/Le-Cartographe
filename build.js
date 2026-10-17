@@ -3,7 +3,7 @@ var fs = require('fs'), path = require('path');
 var S = function (f) { return fs.readFileSync(path.join(__dirname, 'src', f), 'utf8'); };
 
 var css = S('style.css');
-var js = ['core.js', 'levels.js', 'i18n.js', 'art.js', 'app.js'].map(S).join('\n;\n');
+var js = ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'art.js', 'app.js'].map(S).join('\n;\n');
 var fonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap">';
 var body = '<div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div>';
@@ -19,6 +19,5 @@ var frag = '<title>' + title + '</title>\n<meta name="claude:viewport-fit-sides"
 
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), full);
-fs.writeFileSync(path.join(__dirname, 'index.html'), full); /* racine du dépôt : servi par GitHub Pages */
 fs.writeFileSync(path.join(__dirname, 'dist', 'artifact.html'), frag);
 console.log('index.html ' + Math.round(full.length / 1024) + ' Ko · artifact.html ' + Math.round(frag.length / 1024) + ' Ko');

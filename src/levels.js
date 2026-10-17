@@ -7,7 +7,7 @@
 
     /* ───────────── 1 · La Vallée des Trois Meuniers (tuto) ───────────── */
     {
-      id: 1,
+      id: 1, scene: 'moulins',
       title: { fr: 'La Vallée des Trois Meuniers', en: 'The Valley of the Three Millers' },
       scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 2, scout: 1 },
       king: {
@@ -105,7 +105,7 @@
 
     /* ───────────── 2 · Les Rives du Vieux Gué ───────────── */
     {
-      id: 2,
+      id: 2, scene: 'riviere',
       title: { fr: 'Les Rives du Vieux Gué', en: 'The Banks of the Old Ford' },
       scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 2, scout: 1 },
       king: {
@@ -155,7 +155,11 @@
             { k: 'rel', a: 'tannerie', b: 'saule', cap: 'S', j: 1.5,
               text: { fr: 'La tannerie est au sud de Saule, à une journée et demie.', en: 'The tannery is south of Saule, a day and a half away.' } },
             { k: 'rel', a: 'ferme', b: 'pont_casse', cap: 'E', j: 1.25,
-              text: { fr: 'La ferme est à l’est du Pont Cassé, à un peu plus d’une journée.', en: 'The farm is east of the Broken Bridge, a little over a day away.' } }
+              text: { fr: 'La ferme est à l’est du Pont Cassé, à un peu plus d’une journée.', en: 'The farm is east of the Broken Bridge, a little over a day away.' } },
+            { k: 'rel', a: 'tannerie', b: 'gue', cap: 'SW', j: 1.75, approx: true,
+              text: { fr: 'La tannerie est au sud-ouest du gué, à environ une journée trois quarts.', en: 'The tannery is southwest of the ford, about a day and three quarters away.' } },
+            { k: 'rel', a: 'chapelle', b: 'tannerie', cap: 'E', j: 2, approx: true,
+              text: { fr: 'De la tannerie, la chapelle est à l’est, à peu près deux journées.', en: 'From the tannery, the chapel is east, roughly two days away.' } }
           ],
           ask: {
             reply: { fr: 'Pour être précis : la chapelle est à une journée et quart du gué.', en: 'To be precise: the chapel is a day and a quarter from the ford.' },
@@ -171,7 +175,9 @@
             { k: 'rel', a: 'pont_casse', b: 'gue', cap: 'N', j: 1.5,
               text: { fr: 'Le pont cassé est au nord du gué, une journée et demie !', en: 'The broken bridge is north of the ford, a day and a half!' } },
             { k: 'cross', a: 'pont_casse', path: 'riviere',
-              text: { fr: 'Le pont cassé, c’est sur la rivière, forcément !', en: 'The broken bridge is on the river, obviously!' } }
+              text: { fr: 'Le pont cassé, c’est sur la rivière, forcément !', en: 'The broken bridge is on the river, obviously!' } },
+            { k: 'rel', a: 'ferme', b: 'gue', j: 2, approx: true,
+              text: { fr: 'De la ferme au gué, deux bonnes journées de route, je vous le dis !', en: 'From the farm to the ford, a good two days on the road, I tell you!' } }
           ],
           ask: {
             reply: { fr: 'Bon… une journée et quart, si on ne compte pas les ornières.', en: 'Well… a day and a quarter, if you leave out the ruts.' },
