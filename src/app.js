@@ -115,7 +115,12 @@
     var has = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0;
     var tt = Art.src('title'); if (tt) { el.style.backgroundImage = 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%),url(' + tt + ')'; el.classList.add('art'); }
     else { var r = h('div'); r.innerHTML = roseSvg(); el.appendChild(r.firstChild); }
-    el.appendChild(h('h1', { text: t('title') }));
+    el.appendChild(h('div', { class: 'wordmark', 'aria-label': t('title') }, [
+      h('span', { class: 'wm-small' }, [h('i'), h('b', { text: t('titleA') }), h('i')]),
+      h('h1', { text: t('titleB') }),
+      h('div', { class: 'wm-orn', 'aria-hidden': 'true' })
+    ]));
+    el.querySelector('.wm-orn').innerHTML = '<svg viewBox="0 0 240 20"><path d="M4 10 H98 M142 10 H236" stroke="#d2a94b" stroke-width="1.2" stroke-linecap="round"/><path d="M120 2 L128 10 L120 18 L112 10Z" fill="#d2a94b"/><circle cx="104" cy="10" r="2" fill="#d2a94b"/><circle cx="136" cy="10" r="2" fill="#d2a94b"/></svg>';
     el.appendChild(h('p', { class: 'tag', text: t('tagline') }));
     el.appendChild(h('div', { class: 'stack' }, [
       h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) openBriefing(0); else go('atlas'); } }),
@@ -1124,6 +1129,7 @@
     ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
     if (!save.settings.lang) save.settings.lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
     Art.onload = function () { draw(); };
+    try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });

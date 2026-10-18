@@ -4,8 +4,8 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
 
-RAW = '/home/claude/le-cartographe/assets/raw/'
-OUT = '/home/claude/le-cartographe/assets/out/'
+RAW = '/home/claude/cartographe/assets/raw/'
+OUT = '/home/claude/cartographe/assets/out/'
 
 def b64(im, q=84, fmt='WEBP'):
     buf = io.BytesIO(); im.save(buf, fmt, quality=q, method=6)
@@ -88,6 +88,6 @@ A['scenes'] = {'moulins': scene(RAW + 'scene-moulins.jpg'), 'riviere': scene(RAW
 for k, v in A['scenes'].items(): print('scene', k, round(len(v) / 1024), 'Ko')
 
 js = '/* Généré par assets/process.py — ne pas modifier à la main */\nwindow.ASSETS = ' + json.dumps(A, separators=(',', ':')) + ';\n'
-open('/home/claude/le-cartographe/src/assets.js', 'w').write(js)
+open('/home/claude/cartographe/src/assets.js', 'w').write(js)
 print('assets.js', round(len(js) / 1024), 'Ko')
 for k, v in A['stamps'].items(): print(k, v['w'], v['h'], round(len(v['src']) / 1024), 'Ko')

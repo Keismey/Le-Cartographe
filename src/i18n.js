@@ -3,7 +3,7 @@
   'use strict';
   var D = {
     fr: {
-      title: 'Le Cartographe',
+      title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessinez le monde, un témoignage à la fois.',
       version: 'V0.3 · version test',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
@@ -77,7 +77,7 @@
       caps: { N: 'N', NE: 'NE', E: 'E', SE: 'SE', S: 'S', SW: 'SO', W: 'O', NW: 'NO' }
     },
     en: {
-      title: 'The Cartographer',
+      title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
       version: 'V0.3 · test version',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
