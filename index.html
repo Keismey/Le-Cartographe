@@ -3017,7 +3017,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
   function freeUnlocked() { var p = save.progress[LEVELS[0].id]; return !!(p && p.stars >= 1); }
   /* ce que le joueur a débloqué : tout ce qu'utilisent les contrées terminées */
   function kit() {
-    var K = { stamps: {}, paths: {}, terrain: {} };
+    var K = { stamps: {}, paths: {}, terrain: { plain: 1 } };      /* la plaine est offerte dès le départ */
     LEVELS.forEach(function (L) {
       var p = save.progress[L.id]; if (!p || p.stars < 1) return;
       L.places.forEach(function (pl) { K.stamps[pl.type] = 1; });
