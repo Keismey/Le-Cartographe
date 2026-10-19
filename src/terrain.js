@@ -6,13 +6,13 @@
 
   /* col = teinte du papier coloré, ink = trait du crayon, a = intensité, order = ordre d'empilement */
   var KINDS = {
-    plain:    { name: { fr: 'Plaine',    en: 'Plains' },    col: [140, 178, 104], ink: [96, 140, 70],   a: .30, h: .21, order: 0 },
+    plain:    { name: { fr: 'Plaine',    en: 'Plains' },    col: [150, 196, 112], ink: [96, 148, 70],   a: .62, h: .2, order: 0 },
     field:    { name: { fr: 'Blé',       en: 'Wheat' },     col: [232, 196, 72],  ink: [186, 140, 30],  a: .5, h: .3, order: 1 },
     hill:     { name: { fr: 'Collines',  en: 'Hills' },     col: [192, 176, 98],  ink: [144, 122, 56],  a: .45, h: .28, order: 1 },
     marsh:    { name: { fr: 'Marais',    en: 'Marsh' },     col: [120, 164, 150], ink: [66, 118, 110],  a: .45, h: .28, order: 1 },
     sand:     { name: { fr: 'Sable',     en: 'Sand' },      col: [238, 212, 152], ink: [194, 154, 84],  a: .5, h: .26, order: 1 },
     water:    { name: { fr: 'Eau',       en: 'Water' },     col: [136, 184, 218], ink: [66, 118, 170],  a: .5, h: .28, order: 2 },
-    forest:   { name: { fr: 'Forêt',     en: 'Forest' },    col: [86, 138, 88],   ink: [40, 96, 52],    a: .48, h: .1, order: 3, dots: true },
+    forest:   { name: { fr: 'Forêt',     en: 'Forest' },    col: [92, 156, 90],   ink: [40, 100, 52],   a: .8, h: .1, order: 3, dots: true },
     mountain: { name: { fr: 'Montagnes', en: 'Mountains' }, col: [252, 250, 242], ink: [118, 124, 142], a: .88, h: .3, order: 4, cross: true }
   };
   var ORDER = Object.keys(KINDS).sort(function (a, b) { return KINDS[a].order - KINDS[b].order; });
@@ -111,6 +111,7 @@
     (zones || []).forEach(function (z) {
       if (!KINDS[z.k]) return; var P = toScreen(shapePts(z)), lx = L(z.k).getContext('2d'); used[z.k] = true;
       closedPath(lx, P); lx.fill(); outlines.push({ k: z.k, P: P });
+      if (o.base && z.k !== o.base && layers[o.base]) { var bx = layers[o.base].getContext('2d'); bx.save(); bx.globalCompositeOperation = 'destination-out'; closedPath(bx, P); bx.fill(); bx.restore(); }
     });
     (strokes || []).forEach(function (s) {
       if (!s.pts || !s.pts.length) return;
@@ -129,14 +130,6 @@
       lx.save(); lx.setTransform(1, 0, 0, 1, 0, 0); lx.globalCompositeOperation = 'source-in';
       lx.scale(dpr, dpr); lx.fillStyle = tile(k, us, o.strong); lx.fillRect(0, 0, PW / dpr, PH / dpr); lx.restore();
       c.drawImage(lc, 0, 0, PW, PH, 0, 0, W, H);
-    });
-    /* contour au crayon (zones seulement), deux passes légèrement décalées */
-    outlines.forEach(function (ol, idx) {
-      var K = KINDS[ol.k], R = rng(idx * 131 + 7);
-      for (var pass = 0; pass < 2; pass++) {
-        var P = ol.P.map(function (p) { return { x: p.x + (R() - .5) * 1.6 * u, y: p.y + (R() - .5) * 1.6 * u }; });
-        c.strokeStyle = rgba(K.ink, pass ? .22 : .38); c.lineWidth = (pass ? 1 : 1.5) * u; c.lineJoin = 'round'; closedPath(c, P); c.stroke();
-      }
     });
     c.restore();
   }

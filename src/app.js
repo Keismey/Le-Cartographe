@@ -354,9 +354,9 @@
       h('div', { id: 'mapcol' }, [
       h('canvas', { id: 'map', 'aria-label': 'map' }),
       h('div', { class: 'mapfloat tr' }, [
-        h('button', { id: 'z-in', 'aria-label': t('zoomIn'), text: '+', onclick: function () { zoomAt(cw / 2, ch / 2, 1.3); } }),
-        h('button', { id: 'z-out', 'aria-label': t('zoomOut'), text: '−', onclick: function () { zoomAt(cw / 2, ch / 2, 1 / 1.3); } }),
-        h('button', { id: 'z-fit', 'aria-label': t('recenter'), onclick: function () { fitView(); draw(); } }, [uiIcon('cible')])
+        h('button', { id: 'z-in', class: Art.src('ui.zoom_plus') ? 'coinb' : '', 'aria-label': t('zoomIn'), onclick: function () { zoomAt(cw / 2, ch / 2, 1.3); } }, [ico('zoom_plus') || document.createTextNode('+')]),
+        h('button', { id: 'z-out', class: Art.src('ui.zoom_moins') ? 'coinb' : '', 'aria-label': t('zoomOut'), onclick: function () { zoomAt(cw / 2, ch / 2, 1 / 1.3); } }, [ico('zoom_moins') || document.createTextNode('−')]),
+        h('button', { id: 'z-fit', class: Art.src('ui.cible') ? 'coinb' : '', 'aria-label': t('recenter'), onclick: function () { fitView(); draw(); } }, [uiIcon('cible')])
       ]),
       h('div', { id: 'ribbon' }),
       h('div', { id: 'rtoggle' }),

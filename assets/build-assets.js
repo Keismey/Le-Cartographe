@@ -1,7 +1,7 @@
 var fs = require('fs');
 var D = require('./data.js'), A = D.ASSETS, G = D.GROUPS;
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-var DEL = {}; 'N1 N2 N3 N4 T2 ROSE ICONE S3 S4 T1 S1 S2 PO1 PO2 TITRE U1 U2 S5 S6 S7 PO3 PO4 PO5 MER TER1 TER2 TER3 FIN1 FIN2 V1 V2 V3 V4 V5 V6 V7 V8'.split(' ').forEach(function (i) { DEL[i] = 1; });
+var DEL = {}; 'N5 N6 N1 N2 N3 N4 T2 ROSE ICONE S3 S4 T1 S1 S2 PO1 PO2 TITRE U1 U2 S5 S6 S7 PO3 PO4 PO5 MER TER1 TER2 TER3 FIN1 FIN2 V1 V2 V3 V4 V5 V6 V7 V8'.split(' ').forEach(function (i) { DEL[i] = 1; });
 var byId = {}; A.forEach(function (a) { byId[a.id] = a; });
 function count(a) { var n = a.sheet ? a.sheet[0] : (a.portrait ? a.portrait[0] : 1); return a.sheet ? n + ' icônes' : (a.portrait ? n + ' portraits' : 'image seule'); }
 

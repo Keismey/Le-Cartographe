@@ -110,6 +110,10 @@ ic = Image.open(RAW + 'icone.jpg').convert('RGB')
 ic.resize((512, 512), Image.LANCZOS).save(OUT + 'icon-512.png'); ic.resize((192, 192), Image.LANCZOS).save(OUT + 'icon-192.png')
 A['icon'] = b64(ic.resize((96, 96), Image.LANCZOS), 82)
 
+# --- lot 4 : icônes d'interface (gestes, mode libre) ---
+A['ui'].update(sprites(RAW + 'ui-gestes.jpg', ['main', 'annuler', 'corbeille', 'cible', 'engrenage', 'retour'], 3, 2, 120, holes=('cible', 'engrenage')))
+A['ui'].update(sprites(RAW + 'ui-libre.jpg', ['crayon', 'gomme', 'pinceau', 'zoom_plus', 'zoom_moins', 'poing'], 3, 2, 120))
+
 js = '/* Généré par assets/process.py — ne pas modifier à la main */\nwindow.ASSETS = ' + json.dumps(A, separators=(',', ':')) + ';\n'
 open('/home/claude/cartographe/src/assets.js', 'w').write(js)
 print('assets.js', round(len(js) / 1024), 'Ko')

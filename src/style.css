@@ -514,3 +514,7 @@ img.bigthumb { width: min(100%, 300px); align-self: center; border-radius: 6px; 
   .rbtn small { font-size: .52rem; }
   .rbtn.on { transform: none; }
 }
+
+.mapfloat button.coinb { background: none; border: 0; box-shadow: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+.mapfloat button.coinb img.ico { width: 46px; height: 46px; object-fit: contain; }
+.mapfloat button#z-fit.coinb img.ico { width: 34px; height: 34px; }
