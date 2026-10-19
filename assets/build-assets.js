@@ -1,14 +1,14 @@
 var fs = require('fs');
 var D = require('./data.js'), A = D.ASSETS, G = D.GROUPS;
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-var DEL = {}; 'T1 S1 S2 PO1 PO2 TITRE U1 U2 S5 S6 S7 PO3 PO4 PO5 MER TER1 TER2 TER3 FIN1 FIN2 V1 V2 V3 V4 V5 V6 V7 V8'.split(' ').forEach(function (i) { DEL[i] = 1; });
+var DEL = {}; 'N1 N2 N3 N4 T2 ROSE ICONE S3 S4 T1 S1 S2 PO1 PO2 TITRE U1 U2 S5 S6 S7 PO3 PO4 PO5 MER TER1 TER2 TER3 FIN1 FIN2 V1 V2 V3 V4 V5 V6 V7 V8'.split(' ').forEach(function (i) { DEL[i] = 1; });
 var byId = {}; A.forEach(function (a) { byId[a.id] = a; });
 function count(a) { var n = a.sheet ? a.sheet[0] : (a.portrait ? a.portrait[0] : 1); return a.sheet ? n + ' icônes' : (a.portrait ? n + ' portraits' : 'image seule'); }
 
 /* ───── page HTML (fragment pour l'outil Artifact) ───── */
 var cards = '';
-[5, 2, 3].forEach(function (g) {
-  var list = A.filter(function (a) { return a.group === g && !DEL[a.id]; });
+[6, 5, 2, 3].forEach(function (g) {
+  var list = A.filter(function (a) { return a.group === g && !DEL[a.id]; }); if (!list.length) return;
   cards += '<section class="grp" data-g="' + g + '"><div class="grp-h"><h2>' + esc(G[g].name) + '</h2><p>' + esc(G[g].note) + '</p></div>';
   list.forEach(function (a) {
     var ref = a.ref ? '<p class="ref">À joindre comme référence de style : <b>' + esc(byId[a.ref].title) + '</b> (' + a.ref + ')</p>' : '';
@@ -55,11 +55,11 @@ var js = '(function(){var KEY="cartographe-assets-done",done={};try{done=JSON.pa
   'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else fb()})});' +
   '[].forEach.call(document.querySelectorAll(".chip"),function(ch){ch.addEventListener("click",function(){filter=ch.dataset.f;[].forEach.call(document.querySelectorAll(".chip"),function(x){x.setAttribute("aria-pressed",x===ch?"true":"false")});upd()})});upd()})();';
 
-var chips = [['all', 'Tout'], ['5', 'Nouveau'], ['2', 'Recommandé'], ['3', 'Contrées 3 à 8'], ['todo', 'Reste à faire']];
+var chips = [['all', 'Tout'], ['6', 'Icônes d’interface'], ['todo', 'Reste à faire']];
 var page = '<title>Assets du Cartographe</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' +
   '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap">\n' +
   '<style>' + css + '</style>\n<div class="wrap"><h1>Assets du Cartographe</h1>' +
-  '<p class="lead">' + A.length + ' prompts pour Gemini, classés par ordre d’utilité. Chacun contient déjà le style commun : tu copies, tu colles, c’est tout.</p>' +
+  '<p class="lead">' + A.filter(function (x) { return !DEL[x.id]; }).length + ' prompts pour Gemini, classés par ordre d’utilité. Chacun contient déjà le style commun : tu copies, tu colles, c’est tout.</p>' +
   '<div class="how"><h2>Comment faire</h2><ol>' +
   '<li><b>Fond blanc pur, toujours.</b> Je pose les images sur le parchemin en mode « multiplication » : le blanc disparaît tout seul, l’encre et l’aquarelle restent. Un fond gris, texturé ou ombré gâche l’effet.</li>' +
   '<li><b>Commence par « Tampons : habitat ».</b> Quand tu es content de la planche, joins-la aux demandes suivantes comme image de référence (la carte l’indique), pour que tout le jeu garde le même trait.</li>' +
@@ -72,11 +72,12 @@ fs.writeFileSync(__dirname + '/assets-page.html', page);
 
 /* ───── version Markdown (dossier du projet) ───── */
 var md = '# Assets du Cartographe : prompts pour Gemini\n\nRègles : fond blanc pur (les images sont posées en mode « multiplication »), aucun texte dans les images, commencer par « Tampons : habitat » puis le joindre comme référence aux planches suivantes.\n';
-[5, 1, 2, 3, 4].forEach(function (g) {
+[6].forEach(function (g) {
   md += '\n## ' + G[g].name + '\n\n' + G[g].note + '\n';
-  A.filter(function (a) { return a.group === g; }).forEach(function (a) {
+  A.filter(function (a) { return a.group === g && !DEL[a.id]; }).forEach(function (a) {
     md += '\n### ' + a.id + ' · ' + a.title + '\n\n- Fichier : `' + a.file + '` · format ' + a.fmt + ' · ' + count(a) + '\n- Usage : ' + a.use + '\n' + (a.ref ? '- Joindre comme référence : ' + byId[a.ref].title + ' (' + a.ref + ')\n' : '') + '- Je vérifie : ' + a.checks.join(' ; ') + '\n\n```\n' + D.compose(a) + '\n```\n';
   });
 });
+md += '\n## Déjà reçus et intégrés\n\n' + A.filter(function (x) { return DEL[x.id]; }).map(function (x) { return '- ' + x.id + ' · ' + x.title; }).join('\n') + '\n\nPas encore utilisés dans le jeu (rangés pour la suite) : étiquette, séparateur, orlan_triste / orlan_dos, les sprites de relief et de fortifications (contrées 3 à 8), décors de mer, arbres, monts et herbes, vignettes et illustrations de fin.\n';
 fs.writeFileSync(__dirname + '/assets-prompts.md', md);
 console.log('page', Math.round(page.length / 1024) + ' Ko', '· md', Math.round(md.length / 1024) + ' Ko');

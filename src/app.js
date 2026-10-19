@@ -31,18 +31,46 @@
   }
 
   /* ───────────── sauvegarde ───────────── */
-  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, tutDone: false, started: false }; }
+  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, free: { maps: [], seq: 0 }, tutDone: false, started: false }; }
   var save = (function () {
-    try { var raw = localStorage.getItem(KEY); if (raw) return deepMerge(defaultSave(), JSON.parse(raw)); } catch (e) {}
+    var keys = [KEY, KEY + '.bak'];                       /* clé principale, puis copie de secours */
+    for (var i = 0; i < keys.length; i++) {
+      try { var raw = localStorage.getItem(keys[i]); if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') return deepMerge(defaultSave(), o); } } catch (e) {}
+    }
     return defaultSave();
   })();
-  var saveTimer = null, saveWarned = false;
-  function persist() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try { localStorage.setItem(KEY, JSON.stringify(save)); }
-      catch (e) { if (!saveWarned) { saveWarned = true; toast(t('error')); } }
-    }, 200);
+  var saveTimer = null, saveWarned = false, lastBak = 0;
+  function persistNow() {
+    clearTimeout(saveTimer); save.t = Date.now();
+    try {
+      var j = JSON.stringify(save), prev = localStorage.getItem(KEY);
+      localStorage.setItem(KEY, j);
+      if (prev && prev !== j && Date.now() - lastBak > 30000) { localStorage.setItem(KEY + '.bak', prev); lastBak = Date.now(); }
+    } catch (e) { if (!saveWarned) { saveWarned = true; toast(t('error')); } }
+    try { if (window.Cloud) window.Cloud.push(save); } catch (e) {}
+  }
+  function persist() { clearTimeout(saveTimer); saveTimer = setTimeout(persistNow, 200); }
+  /* Sauvegarde en ligne (Artifact) : fusion document par document, le plus récent gagne */
+  function mergeRemote(r) {
+    var ch = false, id;
+    if (r.core && (r.core.t || 0) > (save.t || 0)) {
+      ['settings', 'notes', 'tutDone', 'started'].forEach(function (k) { if (r.core[k] !== undefined) save[k] = r.core[k]; });
+      ch = true;
+    }
+    if (r.free) { save.free = save.free || { maps: [], seq: 0 }; save.free.seq = Math.max(save.free.seq || 0, r.free.seq || 0); save.free.del = (save.free.del || []).concat((r.free.del || []).filter(function (x) { return (save.free.del || []).indexOf(x) < 0; })); }
+    for (id in r.progress) { var lp = save.progress[id], rp = r.progress[id]; if (!lp || (rp.t || 0) > (lp.t || 0)) { save.progress[id] = rp; ch = true; } }
+    for (id in r.inprogress) { var li = save.inprogress[id], ri = r.inprogress[id]; if (!li || (ri.t || 0) > (li.t || 0)) { save.inprogress[id] = ri; ch = true; } }
+    ((r.free && r.free.maps) || []).forEach(function (rm) {
+      if ((save.free.del || []).indexOf(rm.id) >= 0) return;
+      var lm = freeMapById(rm.id);
+      if (!lm) { save.free.maps.push(rm); ch = true; } else if ((rm.t || 0) > (lm.t || 0) && !(S.free && S.free.cur === lm)) { save.free.maps[save.free.maps.indexOf(lm)] = rm; ch = true; }
+    });
+    save.free.maps.sort(function (a, b) { return (b.t || 0) - (a.t || 0); });
+    if (ch) {
+      persistNow();
+      if (S.screen === 'title') { buildTitle(); go('title'); } else if (S.screen === 'atlas') renderAtlas(); else if (S.screen === 'free') buildFreeList();
+      applySettings();
+    }
   }
 
   /* ───────────── état ───────────── */
@@ -50,7 +78,8 @@
     screen: 'title', levelIdx: 0, level: null, phase: 'play',
     placed: {}, drawn: {}, asked: {}, scoutsUsed: 0, suspects: {}, pins: {},
     mode: 'move', activePath: null, ghost: false, panel: 'tools', openCard: null,
-    selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false
+    selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false,
+    free: null, resultView: 'diff', brush: null, brushKey: '', brushSize: 6, freePath: null
   };
   var view = { z: 1, s0: 3, ox: 0, oy: 0 };
   var COL = { ok: '#3f8a52', ko: '#c4382c', near: '#c58a1d' };
@@ -98,8 +127,9 @@
   /* ───────────── navigation ───────────── */
   function go(name) {
     S.screen = name;
-    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === name); });
+    ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === name); });
     if (name === 'atlas') renderAtlas();
+    if (name === 'free') buildFreeList();
     if (name === 'game') { resize(); fitView(); draw(); }
   }
 
@@ -142,24 +172,50 @@
     }
     return a;
   }
+  /* Icônes de secours (traits fins) tant qu'une planche d'icônes n'a pas été livrée : l'asset prend la place dès qu'il existe */
+  var FB = {
+    main: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4a1.5 1.5 0 0 1 3 0v6M14 10V5.5a1.5 1.5 0 0 1 3 0V12M17 9a1.5 1.5 0 0 1 3 0v5c0 4-3 7-7 7h-1.5c-2.5 0-4-1-5.5-3L4 14.5a1.6 1.6 0 0 1 2.5-2L8 14"/>',
+    annuler: '<path d="M3 7v6h6M3.6 13A9 9 0 1 0 6 6.3L3 9"/>',
+    corbeille: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+    cible: '<circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+    engrenage: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.6 3-.6.7 3 2.8 1.3-1.2 2.8 1.2 2.8-2.8 1.3-.7 3-3-.6L12 21.5l-1.6-2.6-3 .6-.7-3-2.8-1.3 1.2-2.8-1.2-2.8 2.8-1.3.7-3 3 .6z"/>',
+    retour: '<path d="M15 5l-7 7 7 7"/>',
+    crayon: '<path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/>',
+    gomme: '<path d="M4 16l9-9 6 6-6 6H8zM9 11l5 5M14 19h6"/>'
+  };
+  function uiIcon(name, cls) {
+    var a = ico(name, cls); if (a) return a;
+    if (!FB[name]) return null;
+    var e = h('span', { class: 'ico fb' + (cls ? ' ' + cls : ''), 'aria-hidden': 'true' });
+    e.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + FB[name] + '</svg>';
+    return e;
+  }
+  /* Portrait dans son médaillon doré */
+  function framed(src, cls) {
+    var ring = Art.src('ui.cadre_rond');
+    if (!ring) return h('img', { class: 'portrait ' + (cls || ''), src: src, alt: '', draggable: 'false' });
+    return h('span', { class: 'pf ' + (cls || '') }, [h('img', { class: 'portrait', src: src, alt: '', draggable: 'false' }), h('img', { class: 'ring', src: ring, alt: '', draggable: 'false' })]);
+  }
   function portrait(w, cls) {
     var s = Art.src('portraits.' + w.id);
-    return s ? h('img', { class: 'portrait ' + (cls || ''), src: s, alt: '', draggable: 'false' }) : h('span', { class: 'em', text: w.emoji });
+    return s ? framed(s, cls) : h('span', { class: 'em', text: w.emoji });
   }
+  function portraitKey(key, cls) { var s = Art.src('portraits.' + key); return s ? framed(s, cls) : null; }
+  function vIcon(verdict, cls) { return ico(verdict === 'ok' ? 'verdict_ok' : (verdict === 'near' ? 'verdict_presque' : 'verdict_rate'), cls); }
   function starsText(n) { var s = h('span', { class: 'starsrow', 'aria-label': t('stars', { n: n }) }); starImgs(n).forEach(function (x) { s.appendChild(x); }); return s; }
   function renderAtlas() {
     var el = $('#atlas'); clear(el);
     el.appendChild(h('div', { class: 'topbar gutter' }, [
-      h('button', { class: 'iconbtn', 'aria-label': t('back'), text: '←', onclick: function () { buildTitle(); go('title'); } }),
+      h('button', { class: 'iconbtn', 'aria-label': t('back'), onclick: function () { buildTitle(); go('title'); } }, [uiIcon('retour')]),
       h('h2', { text: t('atlas') }),
-      h('button', { class: 'iconbtn', 'aria-label': t('settings'), text: '⚙', onclick: openSettings })
+      h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
     ]));
     var body = h('div', { class: 'body scroll gutter' });
     body.appendChild(h('p', { class: 'lead', text: t('atlasText') }));
     LEVELS.forEach(function (L, i) {
       var open = unlocked(i), p = save.progress[L.id], inprog = !!save.inprogress[L.id];
-      var th = p && p.thumb ? h('img', { class: 'thumb', src: p.thumb, alt: '' }) : (Art.src('scenes.' + L.scene) ? h('img', { class: 'thumb', src: Art.src('scenes.' + L.scene), alt: '' }) : h('div', { class: 'thumb', text: String(L.id) }));
-      var btn = h('button', { class: 'region', disabled: open ? null : true, id: 'region-' + L.id, onclick: function () { audio(); openBriefing(i); } }, [
+      var tsrc = thumbFor(L, p), th = tsrc ? h('img', { class: 'thumb', src: tsrc, alt: '' }) : (Art.src('scenes.' + L.scene) ? h('img', { class: 'thumb', src: Art.src('scenes.' + L.scene), alt: '' }) : h('div', { class: 'thumb', text: String(L.id) }));
+      var btn = h('button', { class: 'region', disabled: open ? null : true, id: 'region-' + L.id, onclick: function () { audio(); if (p && p.stars >= 1) openFinished(i); else openBriefing(i); } }, [
         th,
         h('div', { class: 'meta' }, [
           h('div', { class: 'sub', text: t('region', { n: L.id }) }),
@@ -170,6 +226,7 @@
       ]);
       body.appendChild(btn);
     });
+    body.appendChild(freeCard());
     body.appendChild(h('div', { class: 'region', style: 'opacity:.6;cursor:default' }, [
       h('div', { class: 'thumb', text: '…' }),
       h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('soon') }), h('div', { class: 'sub', text: t('soonText') })])
@@ -182,6 +239,23 @@
     if (!any) ns.appendChild(h('p', { class: 'help', text: t('noNotes') }));
     body.appendChild(ns);
     el.appendChild(body);
+  }
+
+  /* ───────────── fiche d'une contrée terminée : voir / exporter la carte, ou rejouer ───────────── */
+  function openFinished(idx) {
+    var L = LEVELS[idx], p = save.progress[L.id], m = p && p.map;
+    var src = thumbFor(L, p);
+    var kids = [h('h2', { text: loc(L.title) })];
+    if (src) kids.push(h('img', { class: 'bigthumb', src: src, alt: '' }));
+    kids.push(h('div', { class: 'scoreline' }, [starsText(p.stars), h('span', { text: ' ' + (m ? t('mapScore', { s: Math.round(m.score) }) : t('best', { s: Math.round(p.score) })) })]));
+    if (m && Math.round(m.score) !== Math.round(p.score)) kids.push(h('p', { class: 'help', text: t('best', { s: Math.round(p.score) }) }));
+    if (!m) kids.push(h('p', { class: 'help', text: t('noMapSaved') }));
+    var row = [];
+    if (m) row.push(h('button', { class: 'btn primary', id: 'btn-export-fin', onclick: function () { exportMap({ final: finalFor(L, m), title: loc(L.title), stars: m.stars, score: m.score, file: 'contree-' + L.id }); } }, [ico('enveloppe', 'sm'), ' ' + t('exportMap')]));
+    row.push(h('button', { class: 'btn', id: 'btn-replay', text: save.inprogress[L.id] ? t('resume') : t('replay'), onclick: function () { closeModal(); openBriefing(idx); } }));
+    kids.push(h('div', { class: 'btnrow' }, row));
+    kids.push(h('button', { class: 'linkbtn', text: t('close'), onclick: closeModal }));
+    modal(kids);
   }
 
   /* ───────────── briefing ───────────── */
@@ -203,12 +277,12 @@
       h('button', { class: 'linkbtn', text: t('back'), onclick: function () { go('atlas'); } })
     ]));
     S.screen = 'briefing';
-    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === 'briefing'); });
+    ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === 'briefing'); });
   }
 
   /* ───────────── niveau ───────────── */
   function startLevel(idx, resume) {
-    var L = LEVELS[idx]; S.levelIdx = idx; S.level = L; S.phase = 'play'; S.result = null; S.detailOpen = false;
+    var L = LEVELS[idx]; S.free = null; S.brush = null; S.brushKey = ''; S.levelIdx = idx; S.level = L; S.phase = 'play'; S.result = null; S.detailOpen = false; S.resultView = 'diff';
     var ip = resume ? save.inprogress[L.id] : null;
     if (!resume) delete save.inprogress[L.id];
     S.placed = ip ? ip.placed || {} : {}; S.drawn = ip ? ip.drawn || {} : {};
@@ -221,14 +295,21 @@
     go('game'); renderAll();
   }
   function persistProgress() {
+    if (S.free) { S.free.cur.t = Date.now(); persist(); return; }
     if (S.phase !== 'play' || !S.level) return;
-    save.inprogress[S.level.id] = { placed: S.placed, drawn: S.drawn, asked: S.asked, scoutsUsed: S.scoutsUsed, suspects: S.suspects, pins: S.pins };
+    save.inprogress[S.level.id] = { placed: S.placed, drawn: S.drawn, asked: S.asked, scoutsUsed: S.scoutsUsed, suspects: S.suspects, pins: S.pins, t: Date.now() };
     persist();
   }
-  function snap() { S.undo.push(JSON.stringify({ p: S.placed, d: S.drawn })); if (S.undo.length > 40) S.undo.shift(); }
+  function snap() {
+    var o = { p: S.placed, d: S.drawn };
+    if (S.free) { o.fp = S.free.cur.places; o.fa = S.free.cur.paths; o.st = S.free.cur.strokes; }
+    S.undo.push(JSON.stringify(o)); if (S.undo.length > 40) S.undo.shift();
+  }
   function undo() {
     if (!S.undo.length || S.phase !== 'play') return;
-    var o = JSON.parse(S.undo.pop()); S.placed = o.p; S.drawn = o.d; sfx('pick'); changed();
+    var o = JSON.parse(S.undo.pop()); S.placed = o.p; S.drawn = o.d;
+    if (S.free) { var m = S.free.cur; m.placed = S.placed; m.drawn = S.drawn; m.places = o.fp || []; m.paths = o.fa || []; m.strokes = o.st || []; syncFreeLevel(); S.selected = null; }
+    sfx('pick'); changed();
   }
   function changed() { persistProgress(); draw(); renderPanel(); renderHint(); tutCheck(); }
 
@@ -263,28 +344,32 @@
   function buildGame() {
     var g = $('#game'); clear(g);
     g.appendChild(h('div', { class: 'topbar gutter' }, [
-      h('button', { class: 'iconbtn', id: 'btn-exit', 'aria-label': t('atlas'), text: '←', onclick: function () { persistProgress(); go('atlas'); } }),
+      h('button', { class: 'iconbtn', id: 'btn-exit', 'aria-label': t('atlas'), onclick: function () { if (S.free) { leaveFree(); return; } persistProgress(); go('atlas'); } }, [uiIcon('retour')]),
       h('h2', { id: 'g-title' }),
-      h('button', { class: 'iconbtn', 'aria-label': t('settings'), text: '⚙', onclick: openSettings })
+      h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
     ]));
     g.appendChild(h('div', { id: 'tut', class: 'gutter' }));
     var wrap = h('div', { id: 'mapwrap' }, [
+      h('div', { id: 'rail' }),
+      h('div', { id: 'mapcol' }, [
       h('canvas', { id: 'map', 'aria-label': 'map' }),
       h('div', { class: 'mapfloat tr' }, [
         h('button', { id: 'z-in', 'aria-label': t('zoomIn'), text: '+', onclick: function () { zoomAt(cw / 2, ch / 2, 1.3); } }),
         h('button', { id: 'z-out', 'aria-label': t('zoomOut'), text: '−', onclick: function () { zoomAt(cw / 2, ch / 2, 1 / 1.3); } }),
-        h('button', { id: 'z-fit', 'aria-label': t('recenter'), text: '⌖', onclick: function () { fitView(); draw(); } })
+        h('button', { id: 'z-fit', 'aria-label': t('recenter'), onclick: function () { fitView(); draw(); } }, [uiIcon('cible')])
       ]),
       h('div', { id: 'ribbon' }),
+      h('div', { id: 'rtoggle' }),
       h('div', { id: 'hint', class: 'maphint', style: 'display:none' }),
       h('div', { id: 'maplegend', class: 'maplegend', style: 'display:none' })
+      ])
     ]);
     g.appendChild(wrap);
     g.appendChild(h('div', { id: 'panel' }));
     g.appendChild(h('div', { id: 'bar', class: 'gutter' }));
     cv = $('#map'); cx = cv.getContext('2d');
     bindMap();
-    if (window.ResizeObserver) new ResizeObserver(function () { resize(); draw(); }).observe(wrap);
+    if (window.ResizeObserver) new ResizeObserver(function () { resize(); draw(); }).observe($('#mapcol'));
     window.addEventListener('resize', function () { resize(); draw(); });
   }
   function resize() {
@@ -294,7 +379,51 @@
     var nw = Math.round(r.width), nh = Math.round(r.height); dpr = Math.min(window.devicePixelRatio || 1, 3);
     if (nw !== cw || nh !== ch) { cw = nw; ch = nh; cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); fitView(); }
   }
-  function renderAll() { renderTop(); renderBar(); renderPanel(); renderHint(); renderRibbon(); renderTut(); readColors(); draw(); }
+  function renderAll() { railKey = ''; renderTop(); renderBar(); renderPanel(); renderHint(); renderRibbon(); renderTut(); readColors(); draw(); }
+
+  /* ───────────── raccourcis d'outils autour de la carte ───────────── */
+  function setMove() { S.mode = 'move'; S.activePath = null; S.brush && (S.brush.on = false); sfx('pick'); renderPanel(); renderHint(); draw(); }
+  function toggleRuler() { S.mode = S.mode === 'ruler' ? 'move' : 'ruler'; S.activePath = null; S.armed = null; sfx('pick'); renderPanel(); renderHint(); draw(); }
+  function toggleGhost() { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); }
+  function cyclePath() {
+    var ps = S.level.paths, i = -1, k;
+    if (S.mode === 'draw') for (k = 0; k < ps.length; k++) if (ps[k].id === S.activePath) i = k;
+    if (i + 1 >= ps.length) { S.mode = 'move'; S.activePath = null; } else { S.mode = 'draw'; S.activePath = ps[i + 1].id; S.armed = null; }
+    sfx('pick'); renderPanel(); renderHint(); draw();
+  }
+  function dropStamp(id) {
+    delete S.placed[id];
+    if (S.free) { var m = S.free.cur; m.places = m.places.filter(function (p) { return p.id !== id; }); S.level.places = S.level.places.filter(function (p) { return p.id !== id; }); }
+  }
+  function removeSel() {
+    var sel = S.selected && S.placed[S.selected] ? S.selected : null; if (!sel) return;
+    snap(); dropStamp(sel); S.selected = null; sfx('low'); changed();
+  }
+  var railKey = '';
+  function railBtn(id, icon, label, on, dis, fn) {
+    return h('button', { class: 'rbtn' + (on ? ' on' : ''), id: id, 'aria-label': label, 'aria-pressed': on ? 'true' : 'false', disabled: dis ? true : null, onclick: fn }, [h('span', { class: 'ri' }, [icon]), h('small', { text: label })]);
+  }
+  function renderRail() {
+    var el = $('#rail'), tg = $('#rtoggle'); if (!el || !tg) return;
+    var inGame = S.screen === 'game' && S.level, play = inGame && S.phase === 'play', res = inGame && S.phase === 'result' && !S.free;
+    var sel = !!(S.selected && S.placed[S.selected]);
+    var key = [play ? 1 : 0, res ? 1 : 0, S.free ? 1 : 0, S.mode, S.activePath || '', S.ghost ? 1 : 0, S.undo.length ? 1 : 0, sel ? 1 : 0, S.resultView, S.brushKey || '', S.armed || '', I.lang, inGame ? S.level.paths.length : 0].join('|');
+    if (key === railKey) return; railKey = key;
+    clear(el); clear(tg);
+    el.style.display = play ? 'flex' : 'none'; tg.style.display = 'none';
+    if (play) {
+      if (S.free) freeRail(el);
+      else {
+        el.appendChild(railBtn('r-move', uiIcon('main'), t('move'), S.mode === 'move', false, setMove));
+        if (S.level.paths.length) el.appendChild(railBtn('r-draw', ico('plume'), t('draw'), S.mode === 'draw', false, cyclePath));
+        el.appendChild(railBtn('r-ruler', ico('regle'), t('rulerShort'), S.mode === 'ruler', false, toggleRuler));
+        el.appendChild(railBtn('r-ghost', ico('loupe'), t('ghostShort'), S.ghost, false, toggleGhost));
+        el.appendChild(railBtn('r-undo', uiIcon('annuler'), t('undo'), false, !S.undo.length, undo));
+        el.appendChild(railBtn('r-remove', uiIcon('corbeille'), t('removeStamp'), false, !sel, removeSel));
+      }
+    }
+
+  }
   /* Bandeau : les indices épinglés restent lisibles pendant qu'on place les tampons */
   function renderRibbon() {
     var el = $('#ribbon'); if (!el) return; clear(el);
@@ -311,7 +440,7 @@
   }
   function renderTop() {
     if (!S.level) return;
-    $('#g-title').textContent = S.level.id + ' · ' + loc(S.level.title);
+    $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : S.level.id + ' · ' + loc(S.level.title);
   }
   function renderBar() {
     var b = $('#bar'); clear(b);
@@ -322,20 +451,28 @@
       b.appendChild(h('button', { class: 'btn primary', id: 'btn-next', disabled: hasNext ? null : true, text: t('next'), onclick: function () { openBriefing(S.levelIdx + 1); } }));
       return;
     }
-    b.appendChild(h('button', { class: 'btn' + (S.panel === 'notebook' ? ' active' : ''), id: 'btn-notebook', text: '📖 ' + t('notebook'), onclick: function () { S.panel = 'notebook'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }));
-    b.appendChild(h('button', { class: 'btn' + (S.panel === 'tools' ? ' active' : ''), id: 'btn-tools', text: '🧭 ' + t('tools'), onclick: function () { S.panel = 'tools'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }));
-    b.appendChild(h('button', { class: 'btn primary seal', id: 'btn-submit', text: '✒ ' + t('submit'), onclick: askSubmit }));
+    if (S.free) {
+      b.appendChild(h('button', { class: 'btn', id: 'btn-rename', text: t('freeRename'), onclick: function () { renameFree(S.free.cur); } }));
+      b.appendChild(h('button', { class: 'btn primary seal', id: 'btn-export-free', onclick: exportFree }, [ico('enveloppe', 'sm'), ' ' + t('exportMap')]));
+      return;
+    }
+    b.appendChild(h('button', { class: 'btn' + (S.panel === 'notebook' ? ' active' : ''), id: 'btn-notebook', onclick: function () { S.panel = 'notebook'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }, [ico('carnet', 'sm'), ' ' + t('notebook')]));
+    b.appendChild(h('button', { class: 'btn' + (S.panel === 'tools' ? ' active' : ''), id: 'btn-tools', onclick: function () { S.panel = 'tools'; sfx('pick'); renderBar(); renderPanel(); tutCheck(); } }, [ico('boussole', 'sm'), ' ' + t('tools')]));
+    b.appendChild(h('button', { class: 'btn primary seal', id: 'btn-submit', onclick: askSubmit }, [ico('sceau', 'sm'), ' ' + t('submit')]));
   }
   function renderHint() {
     var el = $('#hint'), txt = '';
     if (S.phase === 'play') {
       if (S.mode === 'ruler') txt = t('rulerHint');
+      else if (S.mode === 'draw' && S.free) txt = t('freeDrawRiver', { name: I.sub('pathNames', S.freePath) });
       else if (S.mode === 'draw' && S.activePath) txt = t('drawHint', { name: loc(S.level.paths.filter(function (p) { return p.id === S.activePath; })[0].name) });
+      else if (S.armed && S.free) txt = t('freeTapToPlace', { name: I.sub('stampNames', S.armed.slice(5)) });
+      else if (S.mode === 'brush' && S.brush) txt = S.brush.erase ? t('freeEraseHint') : t('freeBrushHint', { name: loc(window.Terrain.KINDS[S.brush.k].name) });
       else if (S.armed) txt = t('armHint', { name: loc(placeById(S.armed).name) });
     }
     el.style.display = txt ? 'block' : 'none'; el.textContent = txt;
     var lg = $('#maplegend');
-    if (S.phase === 'result') {
+    if (S.phase === 'result' && S.resultView !== 'final') {
       lg.style.display = 'flex'; clear(lg);
       lg.appendChild(h('span', {}, [h('i', { style: 'border-color:#d9a93a;border-top-style:dashed' }), t('legendTruth')]));
       lg.appendChild(h('span', {}, [h('i', { style: 'border-color:#6fa3c4' }), t('legendYours')]));
@@ -346,10 +483,12 @@
   var lastPanelKey = null;
   function renderPanel() {
     var p = $('#panel'); if (!p || !S.level) return;
-    var key = S.phase === 'result' ? 'result' : S.panel + ':' + S.level.id, st = key === lastPanelKey ? p.scrollTop : 0;
+    renderRail();
+    var key = S.phase === 'result' ? 'result' : S.panel + ':' + S.level.id + (S.free ? ':' + S.free.cur.id : ''), st = key === lastPanelKey ? p.scrollTop : 0;
     lastPanelKey = key;
     clear(p);
-    if (S.phase === 'result') renderResult(p);
+    if (S.free) renderFreePanel(p);
+    else if (S.phase === 'result') renderResult(p);
     else if (S.panel === 'notebook') renderNotebook(p);
     else renderTools(p);
     p.scrollTop = st;
@@ -371,7 +510,7 @@
       var done = !!S.placed[pl.id];
       var chip = h('div', { class: 'chip' + (done ? ' done' : '') + (S.armed === pl.id ? ' armed' : ''), role: 'button', tabindex: '0', 'data-id': pl.id,
         'aria-label': loc(pl.name) + ' — ' + (done ? t('placed') : t('notPlaced')) }, [
-        chipImage(pl.type), h('span', { text: loc(pl.name) }), done ? h('b', { class: 'ck', text: '✓' }) : null
+        chipImage(pl.type), h('span', { text: loc(pl.name) }), done ? h('b', { class: 'ck' }, [vIcon('ok', 'xs')]) : null
       ]);
       chip.addEventListener('pointerdown', function (e) { chipDown(e, pl); });
       chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.armed = S.armed === pl.id ? null : pl.id; renderPanel(); renderHint(); } });
@@ -387,9 +526,9 @@
         var has = S.drawn[pa.id] && S.drawn[pa.id].length >= 2;
         tg.appendChild(h('button', { class: 'tool' + (S.mode === 'draw' && S.activePath === pa.id ? ' on' : ''), 'data-path': pa.id, style: 'grid-column: span 2',
           onclick: function () { if (S.mode === 'draw' && S.activePath === pa.id) { S.mode = 'move'; S.activePath = null; } else { S.mode = 'draw'; S.activePath = pa.id; } sfx('pick'); renderPanel(); renderHint(); } }, [
-          h('b', {}, [ico('plume') || '✏️']), t('drawPath', { name: loc(pa.name) }) + ' · ' + (has ? t('drawn') : t('notDrawn'))
+          h('b', {}, [ico('plume')]), t('drawPath', { name: loc(pa.name) }) + ' · ' + (has ? t('drawn') : t('notDrawn'))
         ]));
-        tg.appendChild(h('button', { class: 'tool', disabled: has ? null : true, 'data-erase': pa.id, onclick: function () { snap(); delete S.drawn[pa.id]; sfx('low'); changed(); } }, [h('b', {}, [ico('eponge') || '🧽']), t('eraseStroke')]));
+        tg.appendChild(h('button', { class: 'tool', disabled: has ? null : true, 'data-erase': pa.id, onclick: function () { snap(); delete S.drawn[pa.id]; sfx('low'); changed(); } }, [h('b', {}, [ico('eponge')]), t('eraseStroke')]));
       });
       pad.appendChild(tg);
     }
@@ -397,12 +536,12 @@
     pad.appendChild(h('h3', { text: t('toolsTitle') }));
     var sel = S.selected && S.placed[S.selected] ? S.selected : null;
     var tools = h('div', { class: 'tools' }, [
-      h('button', { class: 'tool' + (S.mode === 'move' ? ' on' : ''), id: 't-move', onclick: function () { S.mode = 'move'; S.activePath = null; renderPanel(); renderHint(); } }, [h('b', { text: '✋' }), t('move')]),
-      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: function () { S.mode = S.mode === 'ruler' ? 'move' : 'ruler'; S.activePath = null; S.armed = null; sfx('pick'); renderPanel(); renderHint(); } }, [h('b', {}, [ico('regle') || '📏']), t('ruler')]),
-      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [h('b', {}, [ico('loupe') || '👁']), t('ghost')]),
-      h('button', { class: 'tool', id: 't-undo', disabled: S.undo.length ? null : true, onclick: undo }, [h('b', { text: '↶' }), t('undo')]),
-      h('button', { class: 'tool', id: 't-remove', disabled: sel ? null : true, onclick: function () { if (!sel) return; snap(); delete S.placed[sel]; S.selected = null; sfx('low'); changed(); } }, [h('b', { text: '🗑' }), t('removeStamp')]),
-      h('button', { class: 'tool', id: 't-fit', onclick: function () { fitView(); draw(); } }, [h('b', { text: '⌖' }), t('recenter')])
+      h('button', { class: 'tool' + (S.mode === 'move' ? ' on' : ''), id: 't-move', onclick: setMove }, [h('b', {}, [uiIcon('main')]), t('move')]),
+      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: toggleRuler }, [h('b', {}, [ico('regle')]), t('ruler')]),
+      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: toggleGhost }, [h('b', {}, [ico('loupe')]), t('ghost')]),
+      h('button', { class: 'tool', id: 't-undo', disabled: S.undo.length ? null : true, onclick: undo }, [h('b', {}, [uiIcon('annuler')]), t('undo')]),
+      h('button', { class: 'tool', id: 't-remove', disabled: sel ? null : true, onclick: removeSel }, [h('b', {}, [uiIcon('corbeille')]), t('removeStamp')]),
+      h('button', { class: 'tool', id: 't-fit', onclick: function () { fitView(); draw(); } }, [h('b', {}, [uiIcon('cible')]), t('recenter')])
     ]);
     pad.appendChild(tools);
     if (S.ghost) pad.appendChild(h('div', { class: 'legend' }, [h('span', { text: t('ghostLegend') })]));
@@ -411,8 +550,8 @@
 
   /* ───────────── panneau : carnet ───────────── */
   function badgeFor(status) {
-    if (status === 'ok') return h('span', { class: 'badge ok', title: t('statusOk'), 'aria-label': t('statusOk'), text: '✓' });
-    if (status === 'ko') return h('span', { class: 'badge ko', title: t('statusKo'), 'aria-label': t('statusKo') }, [h('i', { text: '✗' })]);
+    if (status === 'ok') return h('span', { class: 'badge ok', title: t('statusOk'), 'aria-label': t('statusOk') }, [vIcon('ok')]);
+    if (status === 'ko') return h('span', { class: 'badge ko', title: t('statusKo'), 'aria-label': t('statusKo') }, [vIcon('ko')]);
     return h('span', { class: 'badge na', title: t('statusNa'), 'aria-label': t('statusNa'), text: '·' });
   }
   function stmtRow(e) {
@@ -422,22 +561,21 @@
     var togglePin = function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); };
     var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key, onclick: togglePin }, [
       h('div', { class: 'tx' }, [tag ? h('small', { text: tag }) : null, '« ' + loc(txt) + ' »']),
-      h('button', { class: 'pinbtn' + (pinned ? ' on' : ''), 'aria-pressed': pinned ? 'true' : 'false', 'aria-label': pinned ? t('unpin') : t('pin'), text: pinned ? '★' : '☆',
-        })
+      h('button', { class: 'pinbtn' + (pinned ? ' on' : ''), 'aria-pressed': pinned ? 'true' : 'false', 'aria-label': pinned ? t('unpin') : t('pin') }, [ico('punaise')])
     ]);
     return row;
   }
   function renderNotebook(p) {
     var L = S.level, left = tokensLeft(), pad = h('div', { class: 'pad gutter' });
     var tb = h('div', { class: 'tokenbar' }, [
-      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, onclick: useScout }, [ico('jeton_eclaireur', 'sm') || '🔭', ' ' + t('scout', { n: left.scout })]),
-      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [ico('loupe', 'sm') || '👁', ' ' + t('ghost')])
+      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, onclick: useScout }, [ico('jeton_eclaireur', 'sm'), ' ' + t('scout', { n: left.scout })]),
+      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [ico('loupe', 'sm'), ' ' + t('ghost')])
     ]);
     pad.appendChild(tb);
     if (!S.scoutsUsed && !Object.keys(S.asked).length) pad.appendChild(h('p', { class: 'help', text: t('tokenHelp') }));
     if (S.scoutsUsed) {
       var sc = h('div', { class: 'card open' }, [
-        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm') || '🔭', ' ' + t('scoutCardTitle')])].concat(
+        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm'), ' ' + t('scoutCardTitle')])].concat(
           entries().filter(function (e) { return e.kind === 'scout'; }).map(stmtRow)))
       ]);
       pad.appendChild(sc);
@@ -449,7 +587,7 @@
         h('button', { class: 'card-h', style: 'display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit', 'aria-expanded': open ? 'true' : 'false',
           onclick: function () { S.openCard = open ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [
           portrait(w, 'card'),
-          h('span', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', { text: loc(w.job) + (S.suspects[w.id] ? ' · ⚑ ' + t('suspected') : '') })]),
+          h('span', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', {}, [loc(w.job) + (S.suspects[w.id] ? ' · ' : ''), S.suspects[w.id] ? ico('fanion', 'xs') : null, S.suspects[w.id] ? ' ' + t('suspected') : ''])]),
           h('span', { class: 'chev', text: '›' })
         ])
       ]);
@@ -510,6 +648,7 @@
     if (!S.tut || S.phase !== 'play') { el.classList.remove('on'); return; }
     var step = S.tut.step, last = step >= TUT_N;
     el.classList.add('on');
+    var op = portraitKey('orlan', 'tut'); if (op) el.appendChild(op);
     el.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step, n: TUT_N }) }), t('tut' + step)]));
     el.appendChild(h('button', { class: 'skip', text: t('tutSkip'), onclick: tutEnd }));
     el.appendChild(h('button', { id: 'tut-next', text: last ? t('tutDone') : t('tutNext'), onclick: function () { if (last) tutEnd(); else { S.tut.step++; renderTut(); } } }));
@@ -539,27 +678,42 @@
     var sc = Core.score(L, S.placed, S.drawn);
     var stars = Core.stars(sc.score, L, S.suspects);
     var prev = save.progress[L.id], isBest = !prev || sc.score > prev.score;
-    var thumb = makeThumb();
-    var entry = prev ? clone(prev) : { score: 0, stars: 0, noScout: false, thumb: null };
-    if (isBest) { entry.score = sc.score; if (thumb) entry.thumb = thumb; }
+    var newMap = { placed: clone(S.placed), drawn: clone(S.drawn), score: sc.score, stars: stars, t: Date.now() };
+    var entry = prev ? clone(prev) : { score: 0, stars: 0, noScout: false };
+    var choice = null;
+    if (!prev || !prev.map) entry.map = newMap;
+    else {
+      var useNew = sc.score >= prev.map.score;
+      entry.map = useNew ? newMap : prev.map;
+      choice = { old: prev.map, nw: newMap, sel: useNew ? 'nw' : 'old' };
+    }
+    delete entry.thumb;                                  /* la miniature se redessine depuis la carte conservée */
+    entry.t = Date.now();
+    if (isBest) entry.score = sc.score;
     entry.stars = Math.max(entry.stars, stars);
     if (S.scoutsUsed === 0 && stars >= 1) entry.noScout = true;
     save.progress[L.id] = entry;
     if (stars >= 1) save.notes[L.id] = true;
     delete save.inprogress[L.id];
     persist();
-    S.result = { sc: sc, stars: stars, isBest: isBest && !!prev, noScout: S.scoutsUsed === 0 };
+    S.result = { sc: sc, stars: stars, isBest: isBest && !!prev, noScout: S.scoutsUsed === 0, final: finalFor(L, newMap), choice: choice };
+    S.resultView = 'diff';
     S.phase = 'result'; S.mode = 'move'; S.armed = null; S.selected = null; S.ruler = null; S.tut = null;
     sfx('chime'); buzz([30, 40, 30]);
     fitView(); renderAll();
   }
   function renderResult(p) {
     var L = S.level, R = S.result, sc = R.sc, pad = h('div', { class: 'pad gutter', id: 'result' });
+    pad.appendChild(h('div', { class: 'viewseg', role: 'group' }, [['diff', t('viewDiff'), 'loupe'], ['final', t('viewMine'), 'plume']].map(function (v) {
+      return h('button', { class: S.resultView === v[0] ? 'on' : '', 'data-view': v[0], 'aria-pressed': S.resultView === v[0] ? 'true' : 'false', onclick: function () { S.resultView = v[0]; sfx('pick'); renderHint(); draw(); renderPanel(); } }, [ico(v[2], 'sm'), ' ' + v[1]]);
+    })));
     var anim = !R.shown; R.shown = true;
-    var kimg = Art.src('portraits.roi');
+    var liarCase = sc.score >= 88 && R.stars < 3;
+    var kkey = R.stars >= 3 ? 'roi_ravi' : (liarCase ? 'roi_severe' : (R.stars === 2 ? 'roi_content' : (R.stars === 1 ? 'roi' : (sc.score < 25 ? 'roi_furieux' : 'roi_severe'))));
     pad.appendChild(h('div', { class: 'kingsay' }, [
-      kimg ? h('img', { class: 'portrait md', src: kimg, alt: '' }) : null,
-      h('div', {}, [h('h3', { text: t('resultTitle') }), h('p', { text: t(sc.score >= 88 && R.stars < 3 ? 'kingSayLiar' : 'kingSay' + R.stars) })])
+      portraitKey(kkey, 'md') || portraitKey('roi', 'md'),
+      h('div', {}, [h('h3', { text: t('resultTitle') }), h('p', { text: t(liarCase ? 'kingSayLiar' : 'kingSay' + R.stars) })]),
+      ico(R.stars >= 1 ? 'sceau_rubans' : 'sceau_brise', 'seal')
     ]));
     var stars = h('div', { class: 'stars', 'aria-label': t('stars', { n: R.stars }) });
     starImgs(R.stars, 'big', anim).forEach(function (x) { stars.appendChild(x); });
@@ -572,13 +726,22 @@
     sc.items.forEach(function (it) {
       var nm, vis;
       if (it.kind === 'place') { var pl0 = placeById(it.id); nm = loc(pl0.name); var ss = Art.src('stamps.' + pl0.type); vis = ss ? h('img', { src: ss, alt: '' }) : h('b', { text: '•' }); }
-      else { nm = loc(L.paths.filter(function (x) { return x.id === it.id; })[0].name); vis = h('b', { class: 'wave', text: '〰' }); }
-      var sym = it.err == null ? '–' : (it.verdict === 'ok' ? '✓' : (it.verdict === 'near' ? '≈' : '✗'));
-      vr.appendChild(h('div', { class: 'vchip ' + (it.err == null ? 'missing' : it.verdict), title: nm }, [vis, h('span', { class: 'vn', text: nm }), h('i', { text: sym })]));
+      else { nm = loc(L.paths.filter(function (x) { return x.id === it.id; })[0].name); vis = h('b', { class: 'wave' }, [ico('plume')]); }
+      vr.appendChild(h('div', { class: 'vchip ' + (it.err == null ? 'missing' : it.verdict), title: nm }, [vis, h('span', { class: 'vn', text: nm }), it.err == null ? h('i', { text: '–' }) : h('i', {}, [vIcon(it.verdict, 'xs')])]));
     });
     pad.appendChild(vr);
     if (R.isBest) pad.appendChild(h('div', { class: 'scoreline', style: 'color:var(--brass)', text: t('newBest') }));
-    if (R.noScout && R.stars >= 1) pad.appendChild(h('div', { class: 'scoreline', style: 'font-size:.9em;color:var(--muted)', text: '🔭✗ ' + t('noScoutBadge') }));
+    if (R.choice) {
+      var ch = R.choice, opt = function (which, map, label) {
+        var tsrc = makeThumb(finalFor(L, map));
+        return h('button', { class: 'keepopt' + (ch.sel === which ? ' on' : ''), 'data-keep': which, 'aria-pressed': ch.sel === which ? 'true' : 'false',
+          onclick: function () { ch.sel = which; save.progress[L.id].map = which === 'nw' ? ch.nw : ch.old; save.progress[L.id].t = Date.now(); persist(); sfx('pick'); renderPanel(); } }, [
+          tsrc ? h('img', { src: tsrc, alt: '' }) : null, h('b', { text: label }), h('small', { text: t('mapScore', { s: Math.round(map.score) }) })
+        ]);
+      };
+      pad.appendChild(h('div', { class: 'keepcard' }, [h('h3', { text: t('keepTitle') }), h('p', { class: 'help', text: t('keepHelp') }), h('div', { class: 'keeprow' }, [opt('old', ch.old, t('keepOld')), opt('nw', ch.nw, t('keepNew'))])]));
+    }
+    if (R.noScout && R.stars >= 1) pad.appendChild(h('div', { class: 'scoreline', style: 'font-size:.9em;color:var(--muted)' }, [ico('jeton_eclaireur', 'xs'), ' ' + t('noScoutBadge')]));
     if (sc.score >= 88 && R.stars < 3) pad.appendChild(h('p', { class: 'help', text: t('thirdStarNeed') }));
 
     if (L.faulty.length) {
@@ -586,7 +749,7 @@
       L.faulty.forEach(function (id) {
         var w = L.witnesses.filter(function (x) { return x.id === id; })[0];
         pad.appendChild(h('div', { class: 'liar' }, [
-          portrait(w, 'sm'), h('b', { text: ' ' + loc(w.name) }), ' — ', h('span', { text: S.suspects[id] ? '⚑ ' + t('unmasked') : t('unnoticed') }),
+          portrait(w, 'sm'), h('b', { text: ' ' + loc(w.name) }), ' — ', h('span', {}, [S.suspects[id] ? ico('fanion', 'xs') : null, S.suspects[id] ? ' ' + t('unmasked') : t('unnoticed')]),
           h('div', { style: 'margin-top:6px', text: t('liar', { name: loc(w.name), motif: loc(w.why) }) })
         ]));
       });
@@ -594,7 +757,7 @@
         if (S.suspects[w.id] && L.faulty.indexOf(w.id) < 0) pad.appendChild(h('p', { class: 'help', text: t('falseSuspect', { name: loc(w.name) }) }));
       });
     }
-    if (R.stars >= 1) pad.appendChild(h('div', { class: 'orlan' }, [h('small', { text: t('orlanNote', { n: L.id }) }), '« ' + loc(L.note) + ' »']));
+    if (R.stars >= 1) pad.appendChild(h('div', { class: 'orlan' }, [portraitKey(R.stars >= 3 ? 'orlan_clin' : 'orlan', 'sm'), h('div', {}, [h('small', { text: t('orlanNote', { n: L.id }) }), '« ' + loc(L.note) + ' »'])]));
     pad.appendChild(h('p', { class: 'help', style: 'font-style:italic', text: loc(L.outro) }));
 
     pad.appendChild(h('button', { class: 'linkbtn', id: 'btn-detail', text: S.detailOpen ? t('detailHide') : t('detailShow'), onclick: function () { S.detailOpen = !S.detailOpen; renderPanel(); } }));
@@ -607,49 +770,95 @@
         box.appendChild(h('div', { class: 'row' }, [
           h('span', { class: 'nm', text: name }),
           it.err != null && it.kind === 'place' ? h('span', { class: 'sc', text: t('gap', { d: I.days(it.err / L.scale).replace(/ .*/, '') }) }) : null,
-          h('span', { class: 'verd ' + vcls, text: (it.verdict === 'ok' ? '✓ ' : it.verdict === 'near' ? '~ ' : '✗ ') + vlab })
+          h('span', { class: 'verd ' + vcls }, [vIcon(it.verdict, 'xs'), ' ' + vlab])
         ]));
       });
       pad.appendChild(box);
     }
     if (!LEVELS[S.levelIdx + 1]) pad.appendChild(h('p', { class: 'help', text: t('endOfV0') }));
-    pad.appendChild(h('button', { class: 'btn', id: 'btn-export', text: '🖼 ' + t('export_'), onclick: exportPNG }));
+    pad.appendChild(h('button', { class: 'btn', id: 'btn-export', onclick: function () { exportPNG(); } }, [ico('enveloppe', 'sm'), ' ' + t('export_')]));
     p.appendChild(pad);
   }
 
   /* ───────────── export & vignette ───────────── */
   function fitFor(W, H, ratio) { var s0 = Math.min(W, H) * (ratio || .9) / 100; return { z: 1, s0: s0, ox: (W - 100 * s0) / 2, oy: (H - 100 * s0) / 2 }; }
-  function makeThumb() {
+  /* ───────────── cartes finies : rendu propre, miniatures, export ───────────── */
+  function finalFor(L, map) {
+    var sc = Core.score(L, map.placed || {}, map.drawn || {}), placed = {}, drawn = {};
+    sc.items.forEach(function (it) { if (it.at) { if (it.kind === 'place') placed[it.id] = it.at; else drawn[it.id] = it.at; } });
+    return { level: L, placed: placed, drawn: drawn, sc: sc };
+  }
+  var thumbCache = {};
+  function makeThumb(fin) {
     try {
       var c = document.createElement('canvas'); c.width = c.height = 168;
-      var x = c.getContext('2d'); paint(x, 168, 168, fitFor(168, 168, .86), { u: .5, thumb: true });
-      return c.toDataURL('image/jpeg', .6);
+      var x = c.getContext('2d'); paint(x, 168, 168, fitFor(168, 168, .86), { u: .5, thumb: true, final: fin, dpr: 1 });
+      return c.toDataURL('image/jpeg', .72);
     } catch (e) { return null; }
   }
-  function exportPNG() {
+  function thumbFor(L, p) {
+    if (p && p.map) {
+      var key = L.id + ':' + (p.map.t || 0) + ':' + Math.round(p.map.score * 10);
+      if (!thumbCache[key]) thumbCache[key] = makeThumb(finalFor(L, p.map));
+      return thumbCache[key] || p.thumb || null;
+    }
+    return p && p.thumb || null;
+  }
+  function loadImg(src) {
+    return new Promise(function (ok) { var im = new Image(); im.onload = function () { ok(im); }; im.onerror = function () { ok(null); }; im.src = src; });
+  }
+  /* PNG d'export : la carte propre (sans coches ni fantômes), titre sur bandeau, étoiles, score */
+  function exportMap(o) {
     try {
-      var W = 1080, H = 1300, c = document.createElement('canvas'); c.width = W; c.height = H;
+      var W = 1080, H = 1440, c = document.createElement('canvas'); c.width = W; c.height = H;
       var x = c.getContext('2d'); x.fillStyle = '#15242c'; x.fillRect(0, 0, W, H);
+      var tim = Art.img('table'); if (tim && tim._ok) { x.drawImage(tim, 0, 0, tim.naturalWidth, tim.naturalHeight, 0, 0, W, W * tim.naturalHeight / tim.naturalWidth); x.drawImage(tim, 0, 0, tim.naturalWidth, tim.naturalHeight, 0, W * tim.naturalHeight / tim.naturalWidth - 2, W, W * tim.naturalHeight / tim.naturalWidth); x.fillStyle = 'rgba(4,10,14,.45)'; x.fillRect(0, 0, W, H); }
       var m = document.createElement('canvas'); m.width = W; m.height = W;
-      paint(m.getContext('2d'), W, W, fitFor(W, W, .88), { u: 2.3, result: S.result });
+      paint(m.getContext('2d'), W, W, fitFor(W, W, .88), { u: 2.3, final: o.final, dpr: 1 });
       x.drawImage(m, 0, 0);
-      x.fillStyle = '#eadfc0'; x.textAlign = 'center'; x.font = '54px ' + FONT;
-      x.fillText(loc(S.level.title), W / 2, W + 62);
-      x.fillStyle = '#d2a94b'; x.font = '44px ' + FONT;
-      var st = ''; for (var i = 0; i < 3; i++) st += i < S.result.stars ? '★' : '☆';
-      x.fillText(st + '  ' + Math.round(S.result.sc.score) + ' %', W / 2, W + 124);
-      x.fillStyle = '#a9b9b4'; x.font = '30px ' + FONT; x.fillText('Keismey Studio · ' + t('title'), W / 2, W + 176);
+      var bim = Art.img('ui.bandeau'), bm = Art.asset('ui.bandeau'), by = W + 8;
+      if (bim && bim._ok && bm) { var bw = 800, bh = bw * bm.h / bm.w; x.drawImage(bim, (W - bw) / 2, by, bw, bh); x.fillStyle = '#3a2a14'; x.textAlign = 'center'; x.textBaseline = 'middle'; var fs = 50; x.font = fs + 'px ' + FONT; while (x.measureText(o.title).width > 500 && fs > 26) { fs -= 2; x.font = fs + 'px ' + FONT; } x.fillText(o.title, W / 2, by + bh * .47); by += bh + 6; }
+      else { x.fillStyle = '#eadfc0'; x.textAlign = 'center'; x.font = '54px ' + FONT; x.fillText(o.title, W / 2, by + 52); by += 80; }
+      var yy = by + 22;
+      if (o.stars != null) {
+        var sim = Art.img('ui.etoile'), sev = Art.img('ui.etoile_vide'), sw = 64, gap = 14, x0 = W / 2 - (3 * sw + 2 * gap) / 2 - 90;
+        for (var i = 0; i < 3; i++) { var im = i < o.stars ? sim : sev; if (im && im._ok) x.drawImage(im, x0 + i * (sw + gap), yy, sw, sw); }
+        x.fillStyle = '#e7c874'; x.textAlign = 'left'; x.textBaseline = 'middle'; x.font = '52px ' + FONT; x.fillText(Math.round(o.score) + ' %', x0 + 3 * (sw + gap) + 14, yy + sw / 2);
+        yy += sw + 22;
+      }
+      x.fillStyle = '#a9b9b4'; x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.font = '30px ' + FONT; x.fillText('Keismey Studio · ' + t('title'), W / 2, H - 28);
       var url = c.toDataURL('image/png');
+      var shareBtn = null;
+      try {
+        if (navigator.canShare && navigator.share) {
+          var blob = dataToBlob(url), file = new File([blob], 'cartographe.png', { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) shareBtn = h('button', { class: 'btn', text: t('share'), onclick: function () { try { navigator.share({ files: [file], title: o.title }).catch(function () {}); } catch (e) {} } });
+        }
+      } catch (e) {}
       modal([
         h('h2', { text: t('exportTitle') }),
         h('img', { src: url, alt: '', style: 'width:100%;border-radius:6px;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default' }),
         h('p', { class: 'help', text: t('holdToSave') }),
         h('div', { class: 'btnrow' }, [
-          h('a', { class: 'btn', href: url, download: 'cartographe-' + S.level.id + '.png', style: 'text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center', text: t('download') }),
+          h('a', { class: 'btn', href: url, download: 'cartographe-' + (o.file || 'carte') + '.png', style: 'text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center', text: t('download') }),
+          shareBtn,
           h('button', { class: 'btn primary', text: t('close'), onclick: closeModal })
         ])
       ]);
     } catch (e) { toast(t('exportFail')); }
+  }
+  function dataToBlob(url) {
+    var b = atob(url.split(',')[1]), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return new Blob([a], { type: 'image/png' });
+  }
+  function exportPNG() {
+    var L = S.level, p = save.progress[L.id], m = p && p.map; if (!m) return;
+    exportMap({ final: finalFor(L, m), title: loc(L.title), stars: m.stars, score: m.score, file: 'contree-' + L.id });
+  }
+  function resultPaintOpts() {
+    var o = { u: 1, interactive: true, dpr: dpr };
+    if (S.phase === 'result' && S.result) { if (S.resultView === 'final') o.final = S.result.final; else o.result = S.result; }
+    return o;
   }
 
   /* ───────────── réglages ───────────── */
@@ -682,6 +891,7 @@
         h('button', { class: 'btn', id: 'btn-saveio', text: t('exportSave') + ' / ' + t('importSave'), onclick: openSaveIO }),
         h('button', { class: 'btn', id: 'btn-reset', text: t('reset'), onclick: openReset })
       ]),
+      h('p', { class: 'help', id: 'save-status', text: (window.Cloud && window.Cloud.active()) ? t('saveCloud') : t('saveLocal') }),
       h('p', { class: 'help', text: t('about') }),
       h('button', { class: 'btn primary', id: 'btn-close', text: t('close'), onclick: closeModal })
     ]);
@@ -708,7 +918,7 @@
       h('div', { class: 'btnrow' }, [
         h('button', { class: 'btn', text: t('notYet'), onclick: openSettings }),
         h('button', { class: 'btn primary', id: 'btn-reset-yes', text: t('resetYes'), onclick: function () {
-          var lang = save.settings; save = defaultSave(); save.settings = lang; try { localStorage.removeItem(KEY); } catch (e) {} persist(); S.level = null; closeModal(); buildTitle(); go('title'); } })
+          var lang = save.settings; save = defaultSave(); save.settings = lang; try { localStorage.removeItem(KEY); localStorage.removeItem(KEY + '.bak'); } catch (e) {} try { if (window.Cloud) window.Cloud.wipe(); } catch (e) {} persist(); S.level = null; closeModal(); buildTitle(); go('title'); } })
       ])
     ]);
   }
@@ -717,7 +927,7 @@
   function SC() { return view.s0 * view.z; }
   function w2s(p) { return { x: view.ox + p.x * SC(), y: view.oy + (100 - p.y) * SC() }; }
   function s2w(x, y) { return { x: (x - view.ox) / SC(), y: 100 - (y - view.oy) / SC() }; }
-  function fitView() { view = fitFor(cw || 360, ch || 360, .86); }
+  function fitView() { view = fitFor(cw || 360, ch || 360, .9); }
   function clampView() {
     var s = SC(), size = 100 * s, m;
     if (size <= cw) view.ox = (cw - size) / 2; else { m = cw * .12; view.ox = clamp(view.ox, cw - size - m, m); }
@@ -730,9 +940,13 @@
 
   /* ───────────── rendu du parchemin ───────────── */
   var dirty = false;
-  function draw() { if (dirty) return; dirty = true; requestAnimationFrame(function () { dirty = false; if (!cx || !S.level || S.screen !== 'game') return; animating = false; cx.setTransform(dpr, 0, 0, dpr, 0, 0); paint(cx, cw, ch, view, { u: 1, interactive: true, result: S.phase === 'result' ? S.result : null }); if (animating) draw(); }); }
+  function draw() { if (dirty) return; dirty = true; requestAnimationFrame(function () { dirty = false; renderRail(); if (!cx || !S.level || S.screen !== 'game') return; animating = false; cx.setTransform(dpr, 0, 0, dpr, 0, 0); paint(cx, cw, ch, view, resultPaintOpts()); if (animating) draw(); }); }
 
   function mark(c, x, y, status, u) {
+    var vk = status === 'ok' ? 'ui.verdict_ok' : (status === 'near' ? 'ui.verdict_presque' : (status === 'ko' ? 'ui.verdict_rate' : null)), vim = vk && Art.img(vk);
+    if (vim && vim._ok) {
+      var dd = 26 * u; c.save(); c.fillStyle = 'rgba(246,238,214,.94)'; c.beginPath(); c.arc(x, y, dd * .47, 0, 6.3); c.fill(); c.drawImage(vim, x - dd / 2, y - dd / 2, dd, dd); c.restore(); return;
+    }
     var r = 9 * u; c.save(); c.lineWidth = 2 * u;
     if (status === 'ok') { c.fillStyle = COL.ok; c.beginPath(); c.arc(x, y, r, 0, 6.3); c.fill(); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(x - r * .5, y); c.lineTo(x - r * .1, y + r * .45); c.lineTo(x + r * .55, y - r * .4); c.stroke(); }
     else if (status === 'ko') { c.fillStyle = COL.ko; c.beginPath(); c.moveTo(x, y - r * 1.15); c.lineTo(x + r * 1.15, y); c.lineTo(x, y + r * 1.15); c.lineTo(x - r * 1.15, y); c.closePath(); c.fill(); c.strokeStyle = '#fff'; c.beginPath(); c.moveTo(x - r * .4, y - r * .4); c.lineTo(x + r * .4, y + r * .4); c.moveTo(x + r * .4, y - r * .4); c.lineTo(x - r * .4, y + r * .4); c.stroke(); }
@@ -774,8 +988,11 @@
       c.strokeStyle = '#d2a94b'; c.lineWidth = Math.max(3, R * .2); c.beginPath(); c.arc(x, y, R * 1.45, 0, 6.3); c.stroke();
       if (o.badge) {
         var bx = x + R * 1.55, by = y - R * 1.55, br = Math.max(11, R * .55); lastBadge = { x: bx, y: by, r: br };
+        var vrim = Art.img('ui.verdict_rate');
+        if (vrim && vrim._ok) { c.fillStyle = '#f6eed6'; c.strokeStyle = 'rgba(60,30,10,.5)'; c.lineWidth = 1.5; c.beginPath(); c.arc(bx, by, br, 0, 6.3); c.fill(); c.stroke(); c.drawImage(vrim, bx - br * .92, by - br * .92, br * 1.84, br * 1.84); }
+        else {
         c.fillStyle = '#b8402a'; c.strokeStyle = '#f4ead0'; c.lineWidth = 2; c.beginPath(); c.arc(bx, by, br, 0, 6.3); c.fill(); c.stroke();
-        c.strokeStyle = '#fff'; c.lineWidth = Math.max(2, br * .2); c.beginPath(); c.moveTo(bx - br * .38, by - br * .38); c.lineTo(bx + br * .38, by + br * .38); c.moveTo(bx + br * .38, by - br * .38); c.lineTo(bx - br * .38, by + br * .38); c.stroke();
+        c.strokeStyle = '#fff'; c.lineWidth = Math.max(2, br * .2); c.beginPath(); c.moveTo(bx - br * .38, by - br * .38); c.lineTo(bx + br * .38, by + br * .38); c.moveTo(bx + br * .38, by - br * .38); c.lineTo(bx - br * .38, by + br * .38); c.stroke(); }
       }
     }
     c.restore();
@@ -786,7 +1003,7 @@
     var placed = [], blocks = Q.map(function (q) { return { x: q.x - q.R * 1.3, y: q.y - q.R * 1.3, w: q.R * 2.6, h: q.R * 2.6 }; });
     function hit(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
     Q.forEach(function (q) {
-      var fs = Math.max(11, q.R * .78), name = loc(q.pl.name);
+      var fs = Math.max(11, q.R * .78), name = loc(q.pl.name); if (!name) return;
       c.font = 'italic ' + fs + 'px ' + FONT; var tw = c.measureText(name).width, th = fs * 1.15, g = q.R * 1.35 + 2;
       var cands = [
         { x: q.x - tw / 2, y: q.y + g, a: 'center' }, { x: q.x - tw / 2, y: q.y - g - th, a: 'center' },
@@ -867,19 +1084,28 @@
   }
 
   function paint(c, W, H, V, o) {
-    var L = S.level; if (!L) return;
+    var FIN = o.final || null, L = FIN ? FIN.level : S.level; if (!L) return;
+    var PLD = FIN ? FIN.placed : S.placed, DRN = FIN ? FIN.drawn : S.drawn, SEL = FIN ? null : S.selected, GG = FIN ? null : G;
+    var FREE = !FIN && S.free && !o.result;
     lastBadge = null;
     var u = o.u || 1, sc = V.s0 * V.z;
     function X(wx) { return V.ox + wx * sc; } function Y(wy) { return V.oy + (100 - wy) * sc; }
     function P(p) { return { x: X(p.x), y: Y(p.y) }; }
     var g = { P: P, sc: sc, u: u };
     c.save(); c.fillStyle = '#1b150f'; c.fillRect(0, 0, W, H);
+    var tim = Art.img('table');
+    if (tim && tim._ok && !o.thumb) { var tk = Math.max(W, H) / tim.naturalWidth; c.drawImage(tim, 0, 0, tim.naturalWidth * tk, tim.naturalHeight * tk); c.fillStyle = 'rgba(4,10,14,.28)'; c.fillRect(0, 0, W, H); }
     var pad = 7, x0 = X(-pad), y0 = Y(100 + pad), sz = (100 + 2 * pad) * sc;
     var pim = Art.img('parchment');
     if (pim && pim._ok) c.drawImage(pim, 20, 20, 984, 984, x0, y0, sz, sz); else c.drawImage(Art.parchment(), x0, y0, sz, sz);
     c.strokeStyle = 'rgba(50,34,12,.6)'; c.lineWidth = 2 * u; c.strokeRect(x0, y0, sz, sz);
-    /* cadre gradué */
     var ink = 'rgba(58,44,28,.8)', fx = X(0), fy = Y(100), fs = 100 * sc;
+    /* remplissage du terrain : zones au crayon pâle (carte finie, mode libre) */
+    var tzones = null, tstrokes = null, tbase = null;
+    if (FIN) { if (FIN.free) { tzones = []; tstrokes = FIN.strokes || []; } else { tzones = L.terrain || []; tbase = 'plain'; tstrokes = FIN.strokes || null; } }
+    else if (FREE) { tzones = []; tstrokes = S.free.cur.strokes.concat(GG && GG.type === 'brush' ? [GG.stroke] : []); }
+    if (tzones && window.Terrain) window.Terrain.render(c, W, H, tzones, tstrokes, { X: X, Y: Y, sc: sc }, { u: u, strong: !tzones.length, base: tbase, clip: { x: fx, y: fy, w: fs, h: fs }, dpr: o.dpr || 1 });
+    /* cadre gradué */
     c.strokeStyle = ink; c.lineWidth = 1.6 * u; c.strokeRect(fx, fy, fs, fs);
     c.lineWidth = 1 * u; c.strokeRect(fx - 3 * u, fy - 3 * u, fs + 6 * u, fs + 6 * u);
     var i;
@@ -899,7 +1125,17 @@
     var sy = Y(-3.6), sx0 = X(0), sx1 = X(L.scale);
     c.lineWidth = 2 * u; c.beginPath(); c.moveTo(sx0, sy); c.lineTo(sx1, sy); c.moveTo(sx0, sy - 4 * u); c.lineTo(sx0, sy + 4 * u); c.moveTo(sx1, sy - 4 * u); c.lineTo(sx1, sy + 4 * u); c.stroke();
     c.font = 'italic ' + Math.max(10, 3.4 * sc * .8) + 'px ' + FONT; c.fillText('= ' + t('oneDay'), sx1 + 6 * u, sy);
-    Art.rose(c, X(91.5), Y(9), Math.max(13 * u, 5.2 * sc), 'rgba(58,44,28,.7)');
+    var rim = Art.img('ui.rose');
+    if (rim && rim._ok) { var rs = Math.max(34 * u, 16 * sc); c.save(); c.globalAlpha = .93; c.drawImage(rim, X(90.5) - rs / 2, Y(10.5) - rs / 2, rs, rs); c.restore(); }
+    else Art.rose(c, X(91.5), Y(9), Math.max(13 * u, 5.2 * sc), 'rgba(58,44,28,.7)');
+    /* coins dorés */
+    var cim = Art.img('ui.coin');
+    if (cim && cim._ok && !o.thumb) {
+      var cs = Math.max(30 * u, 10 * sc), off = 3.5 * u;
+      [[fx - off, fy - off, 1, 1], [fx + fs + off, fy - off, -1, 1], [fx - off, fy + fs + off, 1, -1], [fx + fs + off, fy + fs + off, -1, -1]].forEach(function (q) {
+        c.save(); c.translate(q[0], q[1]); c.scale(q[2], q[3]); c.globalAlpha = .95; c.drawImage(cim, 0, 0, cs, cs); c.restore();
+      });
+    }
 
     /* tracés */
     function drawRiver(pts, alpha, dashed, tint) {
@@ -913,11 +1149,11 @@
       c.restore();
     }
     function pathLabel(pa, pts) {
-      var spts = [], si2, stamps = L.places.filter(function (q) { return S.placed[q.id]; }).map(function (q) { return P(S.placed[q.id]); });
+      var spts = [], si2, stamps = L.places.filter(function (q) { return PLD[q.id]; }).map(function (q) { return P(PLD[q.id]); });
       for (si2 = 0; si2 < pts.length - 1; si2++) for (var tt = 0; tt < 4; tt++) spts.push({ x: pts[si2].x + (pts[si2 + 1].x - pts[si2].x) * tt / 4, y: pts[si2].y + (pts[si2 + 1].y - pts[si2].y) * tt / 4 });
       var mid = spts[Math.floor(spts.length / 2)] || pts[0], bestD = -1;
       spts.forEach(function (q, qi) { if (qi < 1 || qi > spts.length - 3) return; var qs = P(q), m = 1e9; stamps.forEach(function (s2) { m = Math.min(m, Math.hypot(s2.x - qs.x, s2.y - qs.y)); }); if (m > bestD) { bestD = m; mid = q; } });
-      var pp = P(mid); c.save(); c.font = 'italic ' + Math.max(11, 3.6 * sc * .8) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
+      if (!loc(pa.name)) return; var pp = P(mid); c.save(); c.font = 'italic ' + Math.max(11, 3.6 * sc * .8) + 'px ' + FONT; c.textAlign = 'left'; c.textBaseline = 'bottom';
       c.lineWidth = 4 * u; c.strokeStyle = 'rgba(238,226,190,.9)'; c.strokeText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.fillStyle = '#244a66'; c.fillText(loc(pa.name), pp.x + 9 * u, pp.y - 5 * u); c.restore();
     }
     var R = o.result;
@@ -927,15 +1163,16 @@
         var it = R.sc.items.filter(function (x) { return x.id === pa.id && x.kind === 'path'; })[0];
         if (it && it.at) { drawRiver(it.at, .55, false); }
       } else {
-        var pts = S.drawn[pa.id];
-        var cur = G && G.type === 'draw' && G.path === pa.id ? G.pts : null;
+        var pts = DRN[pa.id];
+        var cur = GG && GG.type === 'draw' && GG.path === pa.id ? GG.pts : null;
         if (cur && cur.length > 1) drawRiver(cur, .6, false);
         else if (pts && pts.length > 1) { drawRiver(pts, 1, false); if (!o.thumb) pathLabel(pa, pts); }
       }
     });
 
+    if (GG && GG.type === 'draw' && GG.path === '__new' && GG.pts.length > 1) drawRiver(GG.pts, .6, false);
     /* indices */
-    if (!R && S.ghost && o.interactive) shownEntries().forEach(function (e) { ghostFor(c, g, e); });
+    if (!R && !FIN && S.ghost && o.interactive) shownEntries().forEach(function (e) { ghostFor(c, g, e); });
 
     /* tampons */
     var Q = [], Rr = clamp(sc * 5.2, 14, 25) * (o.u || 1);
@@ -955,16 +1192,16 @@
       });
     } else {
       L.places.forEach(function (pl) {
-        if (S.selected === pl.id) return; var pp = S.placed[pl.id]; if (!pp) return; var s = P(pp);
-        stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: popScale(pl.id) });
+        if (SEL === pl.id) return; var pp = PLD[pl.id]; if (!pp) return; var s = P(pp);
+        stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: FIN ? 1 : popScale(pl.id) });
       });
-      if (S.selected && S.placed[S.selected]) { var sp2 = P(S.placed[S.selected]); stamp(c, sp2.x, sp2.y, placeById(S.selected), { R: Rr, selected: true, q: Q, pop: popScale(S.selected), badge: !!o.interactive && S.phase === 'play' && !(G && G.type === 'stamp' && G.moved) }); }
+      if (SEL && PLD[SEL]) { var sp2 = P(PLD[SEL]); stamp(c, sp2.x, sp2.y, placeById(SEL), { R: Rr, selected: true, q: Q, pop: popScale(SEL), badge: !!o.interactive && S.phase === 'play' && !(G && G.type === 'stamp' && G.moved) }); }
     }
 
     layoutLabels(c, Q, W, H);
 
     /* règle */
-    if (!R && S.ruler && o.interactive) {
+    if (!R && !FIN && S.ruler && o.interactive) {
       var ra = P(S.ruler.a), rb = P(S.ruler.b), d = Core.dist(S.ruler.a, S.ruler.b) / L.scale;
       c.save(); c.strokeStyle = '#7a2a1c'; c.lineWidth = 3 * u; c.setLineDash([9 * u, 5 * u]); c.beginPath(); c.moveTo(ra.x, ra.y); c.lineTo(rb.x, rb.y); c.stroke(); c.setLineDash([]);
       c.fillStyle = '#7a2a1c'; [ra, rb].forEach(function (q) { c.beginPath(); c.arc(q.x, q.y, 5 * u, 0, 6.3); c.fill(); });
@@ -1025,9 +1262,10 @@
       if (S.mode === 'ruler') {
         var w = snapToStamp(s2w(p.x, p.y)); G = { type: 'ruler', a: w }; S.ruler = { a: w, b: w }; draw(); return;
       }
+      if (S.free && S.mode === 'brush' && S.brush) { var wb = s2w(p.x, p.y); G = { type: 'brush', stroke: { k: S.brush.k || 'plain', w: S.brushSize, erase: !!S.brush.erase, pts: [[round1(wb.x), round1(wb.y)]] } }; draw(); return; }
       if (S.mode === 'draw' && S.activePath) { var w2 = s2w(p.x, p.y); G = { type: 'draw', path: S.activePath, pts: [w2], raw: p }; draw(); return; }
       if (S.selected && S.placed[S.selected] && lastBadge && Math.hypot(p.x - lastBadge.x, p.y - lastBadge.y) <= lastBadge.r + 10) {
-        snap(); delete S.placed[S.selected]; S.selected = null; sfx('low'); buzz(10); changed(); return;
+        snap(); dropStamp(S.selected); S.selected = null; sfx('low'); buzz(10); changed(); return;
       }
       var hit = hitStamp(p);
       if (hit) {
@@ -1056,6 +1294,10 @@
         var wp = s2w(p.x, p.y), last = G.pts[G.pts.length - 1];
         if (Math.hypot(wp.x - last.x, wp.y - last.y) > .5 / Math.max(1, view.z * .6)) { G.pts.push({ x: clamp(wp.x, -3, 103), y: clamp(wp.y, -3, 103) }); draw(); }
       }
+      else if (G.type === 'brush') {
+        var wq = s2w(p.x, p.y), lp = G.stroke.pts[G.stroke.pts.length - 1];
+        if (Math.hypot(wq.x - lp[0], wq.y - lp[1]) > .5) { G.stroke.pts.push([round1(wq.x), round1(wq.y)]); draw(); }
+      }
       else if (G.type === 'stamp') {
         if (!G.moved && Math.hypot(p.x - G.sx, p.y - G.sy) > 5) { G.moved = true; snap(); }
         if (G.moved) {
@@ -1072,14 +1314,15 @@
       if (!G) return;
       var g = G; G = null;
       if (g.type === 'ruler') { var d = Core.dist(S.ruler.a, S.ruler.b); if (d < 1) S.ruler = null; else S.rulerUsed = true; draw(); tutCheck(); }
+      else if (g.type === 'brush') { snap(); S.free.cur.strokes.push(g.stroke); sfx('draw'); changed(); }
       else if (g.type === 'draw') {
         var pts = g.pts, len = 0; for (var i = 1; i < pts.length; i++) len += Core.dist(pts[i - 1], pts[i]);
-        if (pts.length >= 2 && len > 6) { snap(); S.drawn[g.path] = Core.simplify(pts, .7); S.mode = 'move'; S.activePath = null; sfx('draw'); buzz(8); changed(); renderHint(); } else draw();
+        if (pts.length >= 2 && len > 6) { snap(); var pid = g.path; if (S.free && pid === '__new') pid = addFreePath(S.freePath); S.drawn[pid] = Core.simplify(pts, .7); S.mode = 'move'; S.activePath = null; sfx('draw'); buzz(8); changed(); renderHint(); } else draw();
       }
       else if (g.type === 'stamp') {
         if (g.moved) {
           var r = cv.getBoundingClientRect(), out = p.x < -10 || p.y < -10 || p.x > r.width + 10 || p.y > r.height + 10;
-          if (out) { delete S.placed[g.id]; S.selected = null; sfx('low'); } else { sfx('stamp'); buzz(12); }
+          if (out) { dropStamp(g.id); S.selected = null; sfx('low'); } else { sfx('stamp'); buzz(12); }
           changed();
         } else { draw(); renderPanel(); }
       }
@@ -1091,7 +1334,12 @@
     cv.addEventListener('pointercancel', function (e) { delete pointers[e.pointerId]; if (G && G.type === 'stamp') { S.placed[G.id] = G.start; } G = null; pinch = null; draw(); });
   }
   function placeAt(id, w) {
-    snap(); S.placed[id] = { x: clamp(w.x, 0, 100), y: clamp(w.y, 0, 100) }; S.armed = null; S.selected = id;
+    snap(); var keepArmed = null;
+    if (S.free && id.indexOf('type:') === 0) {
+      var m = S.free.cur, type = id.slice(5); m.seq = (m.seq || 0) + 1; keepArmed = id; id = 'f' + m.seq;
+      m.places.push({ id: id, type: type }); S.level.places.push({ id: id, type: type, name: { fr: '', en: '' }, truth: [0, 0] });
+    }
+    S.placed[id] = { x: clamp(w.x, 0, 100), y: clamp(w.y, 0, 100) }; S.armed = keepArmed; S.selected = id;
     S.pop = S.pop || {}; S.pop[id] = performance.now();
     sfx('stamp'); buzz(12); changed();
   }
@@ -1117,18 +1365,175 @@
         else if (S.placed[pl.id] && ev.type !== 'pointercancel') { /* lâché hors carte : le tampon retourne à la palette */ snap(); delete S.placed[pl.id]; S.selected = null; sfx('low'); changed(); }
       } else {
         if (S.placed[pl.id]) { S.selected = pl.id; sfx('pick'); renderPanel(); draw(); }
-        else { S.armed = S.armed === pl.id ? null : pl.id; sfx('pick'); renderPanel(); renderHint(); }
+        else { S.armed = S.armed === pl.id ? null : pl.id; if (S.free) { S.mode = 'move'; S.activePath = null; } sfx('pick'); renderPanel(); renderHint(); }
       }
     }
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   }
 
+
+  /* ───────────── mode libre ───────────── */
+  var MAX_FREE = 12;
+  function round1(v) { return Math.round(v * 10) / 10; }
+  function freeUnlocked() { var p = save.progress[LEVELS[0].id]; return !!(p && p.stars >= 1); }
+  /* ce que le joueur a débloqué : tout ce qu'utilisent les contrées terminées */
+  function kit() {
+    var K = { stamps: {}, paths: {}, terrain: {} };
+    LEVELS.forEach(function (L) {
+      var p = save.progress[L.id]; if (!p || p.stars < 1) return;
+      L.places.forEach(function (pl) { K.stamps[pl.type] = 1; });
+      L.paths.forEach(function (pa) { K.paths[pa.type] = 1; });
+      (L.terrain || []).forEach(function (z) { K.terrain[z.k] = 1; });
+      var u = L.unlock || {};
+      (u.stamps || []).forEach(function (k) { K.stamps[k] = 1; }); (u.paths || []).forEach(function (k) { K.paths[k] = 1; }); (u.terrain || []).forEach(function (k) { K.terrain[k] = 1; });
+    });
+    return K;
+  }
+  function freeTitle(m) { return m.name || t('freeUntitled', { n: m.n || 1 }); }
+  function freeLevel(m) {
+    var L = { id: 'free', free: true, scale: 20, title: { fr: freeTitle(m), en: freeTitle(m) }, places: [], paths: [], witnesses: [], faulty: [], scouts: [], tokens: { ask: 0, scout: 0 }, terrain: [] };
+    m.places.forEach(function (p) { L.places.push({ id: p.id, type: p.type, name: { fr: '', en: '' }, truth: [0, 0] }); });
+    m.paths.forEach(function (p) { L.paths.push({ id: p.id, type: p.type, name: { fr: '', en: '' }, truth: [] }); });
+    return L;
+  }
+  function syncFreeLevel() { var L = freeLevel(S.free.cur); S.level.places = L.places; S.level.paths = L.paths; S.level.title = L.title; }
+  function finalFree(m) { return { level: freeLevel(m), placed: m.placed, drawn: m.drawn, strokes: m.strokes, free: true }; }
+  function freeMapById(id) { return save.free.maps.filter(function (m) { return m.id === id; })[0]; }
+  function addFreePath(type) {
+    var m = S.free.cur; m.seq = (m.seq || 0) + 1; var id = 'p' + m.seq;
+    m.paths.push({ id: id, type: type || 'river' }); S.level.paths.push({ id: id, type: type || 'river', name: { fr: '', en: '' }, truth: [] }); return id;
+  }
+  function newFree() {
+    if (save.free.maps.length >= MAX_FREE) { toast(t('freeMax')); return; }
+    save.free.seq = (save.free.seq || 0) + 1;
+    var m = { id: 'm' + Date.now().toString(36), n: save.free.seq, name: '', t: Date.now(), places: [], paths: [], placed: {}, drawn: {}, strokes: [], seq: 0 };
+    save.free.maps.unshift(m); persist(); startFree(m.id);
+  }
+  function startFree(id) {
+    var m = freeMapById(id); if (!m) return;
+    S.free = { cur: m }; S.levelIdx = -1; S.level = freeLevel(m); S.phase = 'play'; S.result = null; S.resultView = 'diff';
+    S.placed = m.placed; S.drawn = m.drawn; S.asked = {}; S.scoutsUsed = 0; S.suspects = {}; S.pins = {};
+    S.mode = 'move'; S.activePath = null; S.ghost = false; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.undo = []; S.ruler = null; S.tut = null; lastPanelKey = null; S.freePath = null; S.brush = null; S.brushKey = ''; S.brushSize = S.brushSize || 6;
+    go('game'); renderAll();
+  }
+  function leaveFree() { persistProgress(); S.free = null; S.level = null; S.armed = null; S.mode = 'move'; S.brush = null; S.brushKey = ''; railKey = ''; go('free'); }
+  function exportFree() { var m = S.free.cur; exportMap({ final: finalFree(m), title: freeTitle(m), stars: null, file: 'carte-libre' }); }
+  function renameFree(m) {
+    var inp = h('input', { type: 'text', id: 'free-name', maxlength: '32', value: m.name || '', placeholder: freeTitle(m), style: 'width:100%;min-height:48px;font:inherit;font-size:1.1em;padding:8px 12px;border-radius:8px;border:1px solid #8a6a2a;background:#fbf4de;color:#2f2314;-webkit-user-select:text;user-select:text' });
+    var okf = function () { m.name = inp.value.trim().slice(0, 32); persist(); closeModal(); if (S.free) { syncFreeLevel(); renderTop(); renderPanel(); draw(); } else buildFreeList(); };
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') okf(); });
+    modal([h('h2', { text: t('freeName') }), inp, h('div', { class: 'btnrow' }, [h('button', { class: 'btn', text: t('cancel'), onclick: closeModal }), h('button', { class: 'btn primary', id: 'btn-name-ok', text: t('save'), onclick: okf })])]);
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 60);
+  }
+  var freeThumbs = {};
+  function freeThumb(m) { var key = m.id + ':' + m.t; if (!freeThumbs[key]) freeThumbs[key] = makeThumb(finalFree(m)); return freeThumbs[key]; }
+  function freeCard() {
+    var ok = freeUnlocked();
+    return h('button', { class: 'region freeentry', id: 'region-free', disabled: ok ? null : true, onclick: function () { audio(); go('free'); } }, [
+      h('div', { class: 'thumb freeicon' }, [ico('plume')]),
+      h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('freeMode') }), h('div', { class: 'sub', text: ok ? t('freeSub') : t('freeLockedText') }), ok ? h('div', { class: 'sub', text: save.free.maps.length + ' / ' + MAX_FREE }) : null])
+    ]);
+  }
+  function buildFreeList() {
+    var el = $('#free'); if (!el) return; clear(el);
+    el.appendChild(h('div', { class: 'topbar gutter' }, [
+      h('button', { class: 'iconbtn', 'aria-label': t('back'), onclick: function () { go('atlas'); } }, [uiIcon('retour')]),
+      h('h2', { text: t('freeMode') }),
+      h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
+    ]));
+    var body = h('div', { class: 'body scroll gutter' });
+    body.appendChild(h('p', { class: 'lead', text: t('freeIntro') }));
+    body.appendChild(h('button', { class: 'btn primary', id: 'btn-free-new', text: t('freeNew'), onclick: newFree }));
+    if (!save.free.maps.length) body.appendChild(h('p', { class: 'help', text: t('freeEmpty') }));
+    save.free.maps.forEach(function (m) {
+      var ts = freeThumb(m);
+      body.appendChild(h('div', { class: 'region freecard', 'data-fid': m.id }, [
+        h('button', { class: 'fc-open', onclick: function () { audio(); startFree(m.id); } }, [
+          ts ? h('img', { class: 'thumb', src: ts, alt: '' }) : h('div', { class: 'thumb' }),
+          h('div', { class: 'meta' }, [h('div', { class: 'nm', text: freeTitle(m) }), h('div', { class: 'sub', text: m.places.length + ' · ' + m.paths.length })])
+        ]),
+        h('div', { class: 'fc-actions' }, [
+          h('button', { class: 'iconbtn', 'aria-label': t('exportMap'), onclick: function () { exportMap({ final: finalFree(m), title: freeTitle(m), stars: null, file: 'carte-libre' }); } }, [ico('enveloppe')]),
+          h('button', { class: 'iconbtn', 'aria-label': t('freeRename'), onclick: function () { renameFree(m); } }, [uiIcon('crayon')]),
+          h('button', { class: 'iconbtn', 'aria-label': t('freeDelete'), onclick: function () {
+            modal([h('h2', { text: t('freeDelete') }), h('p', { text: t('freeDeleteSure') }), h('div', { class: 'btnrow' }, [
+              h('button', { class: 'btn', text: t('cancel'), onclick: closeModal }),
+              h('button', { class: 'btn primary', text: t('freeDelete'), onclick: function () { save.free.maps = save.free.maps.filter(function (x) { return x.id !== m.id; }); save.free.del = (save.free.del || []).concat([m.id]).slice(-60); persist(); closeModal(); buildFreeList(); } })])]);
+          } }, [uiIcon('corbeille')])
+        ])
+      ]));
+    });
+    el.appendChild(body);
+  }
+  /* palette & barre de raccourcis du mode libre */
+  function toggleBrush(k, erase) {
+    if (S.mode === 'brush' && S.brush && !!S.brush.erase === !!erase && (erase || S.brush.k === k)) { S.mode = 'move'; S.brush = null; S.brushKey = ''; }
+    else { S.mode = 'brush'; S.brush = erase ? { erase: true } : { k: k }; S.brushKey = erase ? 'erase' : k; S.lastBrush = k || S.lastBrush; S.armed = null; S.activePath = null; }
+    sfx('pick'); renderPanel(); renderHint(); draw();
+  }
+  function toggleFreeDraw(type) {
+    if (S.mode === 'draw' && S.freePath === type) { S.mode = 'move'; S.activePath = null; }
+    else { S.mode = 'draw'; S.activePath = '__new'; S.freePath = type; S.armed = null; S.brush = null; S.brushKey = ''; }
+    sfx('pick'); renderPanel(); renderHint(); draw();
+  }
+  function freeRail(el) {
+    var K = kit(), sel = !!(S.selected && S.placed[S.selected]), firstPath = Object.keys(K.paths)[0], terr = window.Terrain.ORDER.filter(function (k) { return K.terrain[k]; });
+    el.appendChild(railBtn('r-move', uiIcon('main'), t('move'), S.mode === 'move', false, setMove));
+    el.appendChild(railBtn('r-draw', ico('plume'), t('draw'), S.mode === 'draw', !firstPath, function () { toggleFreeDraw(S.freePath || firstPath); }));
+    el.appendChild(railBtn('r-pencil', uiIcon('crayon'), t('pencil'), S.mode === 'brush' && S.brush && !S.brush.erase, !terr.length, function () { toggleBrush(S.lastBrush && K.terrain[S.lastBrush] ? S.lastBrush : terr[0]); }));
+    el.appendChild(railBtn('r-eraser', uiIcon('gomme'), t('eraser'), S.mode === 'brush' && S.brush && S.brush.erase, false, function () { toggleBrush(null, true); }));
+    el.appendChild(railBtn('r-undo', uiIcon('annuler'), t('undo'), false, !S.undo.length, undo));
+    el.appendChild(railBtn('r-remove', uiIcon('corbeille'), t('removeStamp'), false, !sel, removeSel));
+  }
+  function renderFreePanel(p) {
+    var m = S.free.cur, K = kit(), pad = h('div', { class: 'pad gutter' });
+    pad.appendChild(h('h3', { text: t('freeStamps') }));
+    var chips = h('div', { class: 'chips' });
+    Object.keys(K.stamps).forEach(function (type) {
+      var id = 'type:' + type, nm = I.sub('stampNames', type);
+      var chip = h('div', { class: 'chip' + (S.armed === id ? ' armed' : ''), role: 'button', tabindex: '0', 'data-type': type, 'aria-label': nm }, [chipImage(type), h('span', { text: nm })]);
+      chip.addEventListener('pointerdown', function (e) { chipDown(e, { id: id, type: type }); });
+      chip.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); S.armed = S.armed === id ? null : id; S.mode = 'move'; renderPanel(); renderHint(); } });
+      chips.appendChild(chip);
+    });
+    pad.appendChild(chips);
+    pad.appendChild(h('h3', { text: t('freePaths') }));
+    var tg = h('div', { class: 'tools' });
+    Object.keys(K.paths).forEach(function (pt) {
+      tg.appendChild(h('button', { class: 'tool' + (S.mode === 'draw' && S.freePath === pt ? ' on' : ''), 'data-fpath': pt, style: 'grid-column: span 2', onclick: function () { toggleFreeDraw(pt); } }, [h('b', {}, [ico('plume')]), t('freeDrawRiver', { name: I.sub('pathNames', pt) })]));
+      m.paths.filter(function (pa) { return pa.type === pt; }).forEach(function (pa, i) {
+        tg.appendChild(h('button', { class: 'tool', 'data-fdel': pa.id, onclick: function () { snap(); m.paths = m.paths.filter(function (x) { return x.id !== pa.id; }); delete m.drawn[pa.id]; S.drawn = m.drawn; syncFreeLevel(); sfx('low'); changed(); } }, [h('b', {}, [uiIcon('corbeille')]), I.sub('pathNames', pt) + ' ' + (i + 1)]));
+      });
+    });
+    pad.appendChild(tg);
+    pad.appendChild(h('h3', { text: t('freePencils') }));
+    var pc = h('div', { class: 'pencils' });
+    window.Terrain.ORDER.forEach(function (k) {
+      if (!K.terrain[k]) return; var KK = window.Terrain.KINDS[k], on = S.mode === 'brush' && S.brush && !S.brush.erase && S.brush.k === k;
+      var rgb = 'rgb(' + KK.col.join(',') + ')', ink = 'rgba(' + KK.ink.join(',') + ',.55)';
+      pc.appendChild(h('button', { class: 'pencil' + (on ? ' on' : ''), 'data-brush': k, onclick: function () { toggleBrush(k); } }, [
+        h('i', { style: 'background:repeating-linear-gradient(45deg,' + ink + ' 0 1px,transparent 1px 5px),' + rgb }), h('span', { text: loc(KK.name) })]));
+    });
+    pc.appendChild(h('button', { class: 'pencil' + (S.mode === 'brush' && S.brush && S.brush.erase ? ' on' : ''), 'data-brush': 'erase', onclick: function () { toggleBrush(null, true); } }, [h('i', { class: 'er' }, [uiIcon('gomme')]), h('span', { text: t('eraser') })]));
+    pad.appendChild(pc);
+    pad.appendChild(h('div', { class: 'brushsize' }, [h('span', { text: t('brushSize') }), seg([[3, t('brushS')], [6, t('brushM')], [12, t('brushL')]], S.brushSize, function (v) { S.brushSize = +v; renderPanel(); })]));
+    pad.appendChild(h('button', { class: 'linkbtn', id: 'btn-free-clear', text: t('freeClear'), disabled: m.strokes.length ? null : true, onclick: function () { if (!m.strokes.length) return; snap(); m.strokes = []; sfx('low'); changed(); } }));
+    pad.appendChild(h('p', { class: 'help', text: t('freeMoreHint') }));
+    p.appendChild(pad);
+  }
+
   /* ───────────── démarrage ───────────── */
   function boot() {
     var app = $('#app');
-    ['title', 'atlas', 'briefing', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
+    ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
     if (!save.settings.lang) save.settings.lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
-    Art.onload = function () { draw(); };
+    var atlasT = null;
+    Art.onload = function () { draw(); clearTimeout(atlasT); atlasT = setTimeout(function () { thumbCache = {}; freeThumbs = {}; if (S.screen === 'atlas') renderAtlas(); else if (S.screen === 'free') buildFreeList(); }, 250); };
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+    document.addEventListener('visibilitychange', function () { if (document.hidden) { if (S.level && S.phase === 'play') persistProgress(); persistNow(); } });
+    window.addEventListener('pagehide', function () { persistNow(); });
+    try { if (window.Cloud) window.Cloud.start(function () { return save; }, mergeRemote); } catch (e) {}
     try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');

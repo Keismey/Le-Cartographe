@@ -87,6 +87,29 @@ def scene(path, w=720, q=76):
 A['scenes'] = {'moulins': scene(RAW + 'scene-moulins.jpg'), 'riviere': scene(RAW + 'scene-riviere.jpg'), 'chateau': scene(RAW + 'scene-chateau.jpg')}
 for k, v in A['scenes'].items(): print('scene', k, round(len(v) / 1024), 'Ko')
 
+
+# --- lot 3 : relief, fortifications, sceaux, ornements, roi/Orlan, rose, table, icône ---
+A['stamps'].update(sprites(RAW + 'lieux-relief.jpg', ['montagne', 'colline', 'col', 'falaise', 'marais', 'rochers'], 3, 2, 200))
+A['stamps'].update(sprites(RAW + 'lieux-fortifs.jpg', ['tour', 'fort', 'ville_fortifiee', 'chateau', 'mine', 'ruines'], 3, 2, 200))
+A['ui'].update(sprites(RAW + 'ui-sceaux.jpg', ['sceau_rubans', 'enveloppe', 'sceau_brise', 'verdict_ok', 'verdict_presque', 'verdict_rate'], 3, 2, 160, holes=('verdict_ok', 'verdict_presque', 'verdict_rate')))
+def boxes(path, spec, holes=()):
+    sheet = Image.open(path).convert('RGB'); res = {}
+    for name, (maxdim, box) in spec.items():
+        rgba = remove_bg(sheet.crop(box), fill_holes=(name in holes)); bb = bbox_alpha(rgba); c = rgba.crop(bb)
+        k = maxdim / max(c.size); w, h = max(1, round(c.size[0] * k)), max(1, round(c.size[1] * k))
+        im = c.resize((w, h), Image.LANCZOS); res[name] = {'src': b64(im, 86), 'w': w, 'h': h}; im.save(OUT + name + '.png')
+    return res
+A['ui'].update(boxes(RAW + 'ui-ornements.jpg', {
+    'coin': (200, (20, 30, 410, 400)), 'separateur': (420, (445, 80, 1240, 180)), 'bandeau': (420, (445, 205, 1240, 395)),
+    'punaise': (160, (110, 440, 360, 730)), 'cadre_rond': (260, (440, 460, 830, 780)), 'etiquette': (200, (910, 400, 1230, 830))}, holes=('cadre_rond', 'coin', 'separateur')))
+A['portraits'].update(portraits(RAW + 'portraits-roi.jpg', ['roi_furieux', 'roi_severe', 'roi_content', 'roi_ravi'], 256))
+A['portraits'].update(portraits(RAW + 'portraits-orlan.jpg', ['orlan', 'orlan_triste', 'orlan_clin', 'orlan_dos'], 256))
+A['ui'].update(sprites(RAW + 'rose.jpg', ['rose'], 1, 1, 420, holes=('rose',)))
+tb = Image.open(RAW + 'table.jpg').convert('RGB').resize((512, 512), Image.LANCZOS); A['table'] = b64(tb, 70)
+ic = Image.open(RAW + 'icone.jpg').convert('RGB')
+ic.resize((512, 512), Image.LANCZOS).save(OUT + 'icon-512.png'); ic.resize((192, 192), Image.LANCZOS).save(OUT + 'icon-192.png')
+A['icon'] = b64(ic.resize((96, 96), Image.LANCZOS), 82)
+
 js = '/* Généré par assets/process.py — ne pas modifier à la main */\nwindow.ASSETS = ' + json.dumps(A, separators=(',', ':')) + ';\n'
 open('/home/claude/cartographe/src/assets.js', 'w').write(js)
 print('assets.js', round(len(js) / 1024), 'Ko')

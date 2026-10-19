@@ -16,6 +16,31 @@ var REF = "Reference: the attached image is an already approved sheet. Match its
 var ASSETS = [
 
   /* ───────── NOUVEAU (18 oct.) : habillage, récompenses, personnages de l'histoire ───────── */
+  /* ───────── NOUVEAU (19 oct.) : icônes d'interface restées dessinées en traits simples ───────── */
+  { id: 'N5', group: 6, title: "Icônes d'interface : gestes et boutons", file: 'ui-gestes.png', fmt: '3:2', sheet: [6, 3, 2, 'UI'], ref: 'U1',
+    use: "Aujourd'hui ces six boutons sont de simples traits que je dessine par code : ils détonnent à côté du reste. Déplacer (main), Annuler, Retirer (corbeille), Recentrer, Réglages, Retour.",
+    checks: ["Silhouettes très simples, lisibles à 32 pixels", "Aucune lettre ni chiffre", "La main est ouverte et ne tient rien", "Fond blanc pur"],
+    subjects: [
+      "an open hand with spread fingers, palm facing the viewer, as if about to push a map across a table (the 'move' tool)",
+      "a curved brass arrow turning back on itself counter-clockwise, like an undo arrow, with a small ink-stained tip",
+      "a small round wooden waste bin with a lid, seen slightly from the side (the 'remove' tool)",
+      "a brass gunsight-style target ring with four short tick marks at north, south, east and west (the 'recentre' tool)",
+      "a brass cog wheel with eight teeth and a round hole in the middle (the 'settings' button)",
+      "a thick cream parchment arrow pointing left, with a thin brass edging (the 'back' button)"
+    ] },
+
+  { id: 'N6', group: 6, title: "Icônes d'interface : mode libre", file: 'ui-libre.png', fmt: '3:2', sheet: [6, 3, 2, 'UI'], ref: 'N5',
+    use: "Pour le mode libre : crayon de couleur, gomme, pinceau, et les boutons de zoom. Remplaceront mes traits simples.",
+    checks: ["Le crayon de couleur est bien un crayon, pas une plume", "Les boutons + et − sont dessinés (pas écrits en lettres)", "Fond blanc pur"],
+    subjects: [
+      "a single colored pencil with a sharpened tip, wooden body painted dark green, seen diagonally",
+      "a white rubber eraser block, slightly worn at one corner, seen diagonally",
+      "a fine round paint brush with a wooden handle and a tip dipped in blue",
+      "a round brass button with a plain plus sign engraved in the middle (zoom in)",
+      "a round brass button with a plain minus sign engraved in the middle (zoom out)",
+      "a closed fist hand holding nothing, palm side, as if grabbing the paper (the 'drag' gesture)"
+    ] },
+
   { id: 'N1', group: 5, title: 'Le roi : 4 expressions', file: 'roi-expressions.png', fmt: '1:1', portrait: [4, 2, 2], ref: 'PO2',
     use: "Le roi réagit à ton verdict : son visage change selon les étoiles (0, 1, 2 ou 3). Aujourd'hui j'ai un seul portrait pour toutes les réactions.",
     checks: ["C'est bien le même roi que sur la planche de référence (barbe, couronne, cape d'hermine bleue)", "Les 4 humeurs se lisent au premier regard, même en petit", "Même cadrage et même taille de tête sur les 4"],
@@ -340,6 +365,7 @@ var ASSETS = [
 ];
 
 var GROUPS = {
+  6: { name: 'Nouveau : icônes d’interface', note: 'Le tour du jeu du 19 oct. : tout le reste est maintenant dessiné. Il ne reste que ces deux planches de boutons, qui sont encore de simples traits faits par code.' },
   5: { name: 'Nouveau : habillage et personnages', note: 'Ce qui me manque pour passer la partie 1–2 de « correcte » à « excellente » : le roi qui réagit, Orlan, les sceaux de verdict et les ornements d’interface.' },
   1: { name: 'Pour la prochaine version', note: 'Reçu et intégré.' },
   2: { name: 'Recommandé', note: 'Toujours à faire : la rose des vents et la table servent à l’habillage, l’icône sert à installer le jeu sur l’écran d’accueil.' },

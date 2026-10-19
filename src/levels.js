@@ -18,6 +18,12 @@
         fr: 'La Rivière Menue descend des collines du nord-ouest vers le sud-est, en passant par les trois moulins.',
         en: 'The Menue River flows from the northwest hills to the southeast, past all three mills.'
       },
+      terrain: [
+        { k: 'mountain', c: [4, 91], r: [24, 9], rot: -38 }, { k: 'mountain', c: [18, 99], r: [18, 7], rot: -8 }, { k: 'mountain', c: [1, 72], r: [8, 15], rot: 8 },
+        { k: 'mountain', c: [99, 19], r: [11, 23], rot: 14 }, { k: 'mountain', c: [88, 3], r: [17, 8], rot: -18 }, { k: 'mountain', c: [101, 42], r: [6, 12], rot: 0 },
+        { k: 'field', c: [79, 61], r: [14, 8], rot: 18 }, { k: 'field', c: [62, 82], r: [11, 7], rot: -10 }, { k: 'field', c: [29, 44], r: [10, 7], rot: 25 },
+        { k: 'forest', c: [91, 87], r: [14, 11] }, { k: 'forest', c: [20, 16], r: [19, 12], rot: 10 }, { k: 'forest', c: [48, 8], r: [12, 7] }
+      ],
       places: [
         { id: 'moulin_haut',   type: 'moulin',  name: { fr: 'Moulin Haut',         en: 'Upper Mill' },   truth: [20, 75] },
         { id: 'moulin_milieu', type: 'moulin',  name: { fr: 'Moulin Milieu',       en: 'Middle Mill' },  truth: [45, 55] },
@@ -116,6 +122,14 @@
         fr: 'La Rivière Vieille descend du nord, passe au Pont Cassé puis au Gué, et file vers le sud-est.',
         en: 'The Old River flows down from the north, past the Broken Bridge and the Ford, then runs southeast.'
       },
+      terrain: [
+        { k: 'mountain', c: [58, 101], r: [28, 8], rot: 4 }, { k: 'mountain', c: [88, 95], r: [14, 9], rot: -20 },
+        { k: 'water', c: [80, -3], r: [22, 9], rot: -12 },
+        { k: 'marsh', c: [60, 54], r: [7, 11], rot: 12 }, { k: 'marsh', c: [43, 33], r: [6, 8], rot: -20 },
+        { k: 'field', c: [81, 73], r: [13, 9], rot: 14 }, { k: 'field', c: [68, 80], r: [10, 6], rot: -8 },
+        { k: 'forest', c: [10, 63], r: [11, 19] }, { k: 'forest', c: [23, 84], r: [15, 9], rot: 10 }, { k: 'forest', c: [93, 40], r: [8, 14] },
+        { k: 'hill', c: [68, 12], r: [15, 8], rot: 8 }, { k: 'hill', c: [34, 14], r: [10, 6] }
+      ],
       places: [
         { id: 'gue',        type: 'gue',        name: { fr: 'Gué',                   en: 'Ford' },            truth: [50, 45] },
         { id: 'saule',      type: 'village',    name: { fr: 'Village de Saule',      en: 'Saule Village' },   truth: [30, 60] },
