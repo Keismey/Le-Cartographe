@@ -143,7 +143,7 @@
   function buildTitle() {
     var el = $('#title'); clear(el);
     var has = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0;
-    var tt = Art.src('title'); if (tt) { el.style.backgroundImage = 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%),url(' + tt + ')'; el.classList.add('art'); }
+    var tt = Art.src('title'); if (tt) { el.style.setProperty('--tbg', 'url(' + tt + ')'); el.style.setProperty('--tshade', 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%)'); el.style.backgroundImage = 'none'; el.classList.add('art'); }
     else { var r = h('div'); r.innerHTML = roseSvg(); el.appendChild(r.firstChild); }
     el.appendChild(h('div', { class: 'wordmark', 'aria-label': t('title') }, [
       h('span', { class: 'wm-small' }, [h('i'), h('b', { text: t('titleA') }), h('i')]),

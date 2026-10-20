@@ -71,7 +71,11 @@ a.btn { color: var(--text); }
     repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
     repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 38px),
     var(--night); }
-#title.art { background-size: cover; background-position: center bottom; justify-content: flex-start; padding-top: 9vh; }
+#title.art { overflow: hidden; isolation: isolate; justify-content: flex-start; padding-top: 9vh; }
+/* illustration au format téléphone, centrée ; les côtés reprennent la même image, floutée et assombrie */
+#title.art::before, #title.art::after { content: ''; position: absolute; top: 0; bottom: 0; z-index: -1; background-repeat: no-repeat; background-position: center bottom; background-size: cover; }
+#title.art::before { left: 0; right: 0; background-image: var(--tbg); filter: blur(26px) brightness(.55) saturate(1.1); transform: scale(1.2); }
+#title.art::after { left: 50%; width: min(100%, calc(100dvh * .558)); transform: translateX(-50%); background-image: var(--tshade), var(--tbg); box-shadow: 0 0 40px rgba(0,0,0,.6); }
 #title.art h1 { text-shadow: 0 2px 14px rgba(0,0,0,.7); }
 #title.art p.tag { color: #e4d6ae; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 #title.art .stack { margin-top: auto; margin-bottom: 9vh; }
@@ -2296,7 +2300,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
   function buildTitle() {
     var el = $('#title'); clear(el);
     var has = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0;
-    var tt = Art.src('title'); if (tt) { el.style.backgroundImage = 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%),url(' + tt + ')'; el.classList.add('art'); }
+    var tt = Art.src('title'); if (tt) { el.style.setProperty('--tbg', 'url(' + tt + ')'); el.style.setProperty('--tshade', 'linear-gradient(180deg,rgba(4,14,18,.55) 0%,rgba(4,14,18,0) 32%,rgba(4,14,18,0) 62%,rgba(4,14,18,.72) 100%)'); el.style.backgroundImage = 'none'; el.classList.add('art'); }
     else { var r = h('div'); r.innerHTML = roseSvg(); el.appendChild(r.firstChild); }
     el.appendChild(h('div', { class: 'wordmark', 'aria-label': t('title') }, [
       h('span', { class: 'wm-small' }, [h('i'), h('b', { text: t('titleA') }), h('i')]),
