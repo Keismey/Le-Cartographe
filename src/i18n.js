@@ -66,7 +66,7 @@
       endingCard: 'La vraie carte', endingRevisit: 'Revoir la fin', endingDecide: 'Choisir la fin',
       endingPublishShort: 'Vous avez publié la carte.', endingSecretShort: 'Vous avez gardé le secret.',
 
-      settingsTitle: 'Réglages', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
+      settingsTitle: 'Réglages', music: 'Musique', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
       on: 'activé', off: 'désactivé', exportSave: 'Exporter la sauvegarde', importSave: 'Importer une sauvegarde',
       resetYes: 'Effacer', savedOk: 'Sauvegarde importée.', importFail: 'Fichier de sauvegarde illisible.',
       saveText: 'Zone de sauvegarde (copiez ou collez ce texte)', importBtn: 'Importer ce texte',
@@ -164,7 +164,7 @@
       endingCard: 'The true map', endingRevisit: 'See the ending again', endingDecide: 'Choose the ending',
       endingPublishShort: 'You published the map.', endingSecretShort: 'You kept the secret.',
 
-      settingsTitle: 'Settings', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
+      settingsTitle: 'Settings', music: 'Music', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
       on: 'on', off: 'off', exportSave: 'Export save', importSave: 'Import a save',
       resetYes: 'Erase', savedOk: 'Save imported.', importFail: 'Unreadable save file.',
       saveText: 'Save area (copy or paste this text)', importBtn: 'Import this text',

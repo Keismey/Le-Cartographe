@@ -31,7 +31,7 @@
   }
 
   /* ───────────── sauvegarde ───────────── */
-  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, free: { maps: [], seq: 0 }, tutDone: false, started: false }; }
+  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, music: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, free: { maps: [], seq: 0 }, tutDone: false, started: false }; }
   var save = (function () {
     var keys = [KEY, KEY + '.bak'];                       /* clé principale, puis copie de secours */
     for (var i = 0; i < keys.length; i++) {
@@ -113,6 +113,61 @@
       else if (name === 'star') { tone(880, .35, 'triangle', .13); tone(1318, .45, 'sine', .07, .05); }
     } catch (e) {}
   }
+
+  /* ───────────── musique : fondus entre écrans, boucle sans coupure ───────────── */
+  var MUSIC = window.MUSIC || {}, MVOL = .6, MX = 5;
+  var mus = { tr: {}, unlocked: false, last: 0 };
+  function mpick(list) { for (var i = 0; i < list.length; i++) if (MUSIC[list[i]]) return list[i]; return null; }
+  function musicWant() {
+    if (!save.settings.music || document.hidden) return null;
+    var s = S.screen;
+    if (s === 'title') return mpick(['titre']);
+    if (s === 'atlas' || s === 'briefing') return mpick(['atlas', 'titre']);
+    if (s === 'free') return mpick(['libre', 'atlas', 'titre']);
+    if (s === 'game' && S.level) {
+      if (S.free) return mpick(['libre']);
+      if (S.phase === 'result') return mpick(['c' + S.level.id]);
+      return mpick(['c' + S.level.id]);
+    }
+    return null;
+  }
+  function mtrack(name) {
+    if (!mus.tr[name]) {
+      var mk = function () { var a = new Audio(MUSIC[name]); a.preload = 'auto'; a.loop = false; a.ramp = false; return a; };
+      mus.tr[name] = { els: [mk(), mk()], g: 0, act: 0 };
+    }
+    return mus.tr[name];
+  }
+  function mclamp(v) { return Math.max(0, Math.min(1, v)); }
+  function musicTick() {
+    var now = Date.now(), dt = Math.min(.25, (now - mus.last) / 1000); mus.last = now;
+    var want = mus.unlocked ? musicWant() : null;
+    if (want) mtrack(want);
+    Object.keys(mus.tr).forEach(function (name) {
+      var T = mus.tr[name], on = name === want;
+      T.g = on ? Math.min(1, T.g + dt / 1.4) : Math.max(0, T.g - dt / 0.9);
+      var e = T.els[T.act], o = T.els[1 - T.act];
+      if (T.g <= 0) { if (!e.paused) e.pause(); if (!o.paused) o.pause(); return; }
+      if (e.paused && !e.ended) { var pr = e.play(); if (pr && pr.catch) pr.catch(function () {}); }
+      var d = e.duration;
+      if (isFinite(d) && d > MX * 2) {
+        var left = d - e.currentTime;
+        if (left < MX && o.paused) { o.currentTime = 0; o.ramp = true; var p2 = o.play(); if (p2 && p2.catch) p2.catch(function () {}); }
+        if (left < .08 || e.ended) { e.pause(); e.currentTime = 0; T.act = 1 - T.act; e = T.els[T.act]; o = T.els[1 - T.act]; }
+      }
+      [e, o].forEach(function (el) {
+        if (el.paused) return;
+        var dd = el.duration, f = 1;
+        if (isFinite(dd) && dd > MX * 2) { f = Math.min(1, (dd - el.currentTime) / MX); if (el.ramp) f = Math.min(f, el.currentTime / MX); if (el.currentTime > MX) el.ramp = false; }
+        try { el.volume = mclamp(T.g * MVOL * mclamp(f)); } catch (x) {}
+      });
+    });
+  }
+  function musicUnlock() { if (mus.unlocked) return; mus.unlocked = true; musicTick(); }
+  document.addEventListener('pointerdown', musicUnlock, true);
+  document.addEventListener('keydown', musicUnlock, true);
+  setInterval(musicTick, 80);
+
   function buzz(ms) { if (save.settings.vibrate) try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 
   /* ───────────── toast & modale ───────────── */
@@ -949,6 +1004,7 @@
       h('div', { class: 'setrow' }, [h('span', { text: t('lang') }), seg([['fr', 'Français'], ['en', 'English']], I.lang, function (v) { s.lang = v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('textSize') }), seg([[0, 'A'], [1, 'A+'], [2, 'A++']], s.textSize, function (v) { s.textSize = +v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('colorblind') }), seg([['0', t('off')], ['1', t('on')]], s.cb ? '1' : '0', function (v) { s.cb = v === '1'; persist(); refreshUI(); openSettings(); })]),
+      h('div', { class: 'setrow' }, [h('span', { text: t('music') }), seg([['1', t('on')], ['0', t('off')]], s.music !== false ? '1' : '0', function (v) { s.music = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'btnrow' }, [
@@ -1616,7 +1672,7 @@
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
-    window.__cart = { S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    window.__cart = { mus: mus, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

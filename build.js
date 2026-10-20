@@ -3,7 +3,12 @@ var fs = require('fs'), path = require('path');
 var S = function (f) { return fs.readFileSync(path.join(__dirname, 'src', f), 'utf8'); };
 
 var css = S('fonts.css') + S('style.css');
-var js = ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'terrain.js', 'art.js', 'cloud.js', 'app.js'].map(S).join('\n;\n');
+var musicJs = (function () {
+  var dir = path.join(__dirname, 'assets', 'music'), o = {};
+  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'data:audio/mpeg;base64,' + fs.readFileSync(path.join(dir, f)).toString('base64'); }); } catch (e) {}
+  return 'window.MUSIC=' + JSON.stringify(o) + ';';
+})();
+var js = ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'terrain.js', 'art.js', 'cloud.js'].map(S).join('\n;\n') + '\n;\n' + musicJs + '\n;\n' + S('app.js');
 var b64 = function (f) { try { return fs.readFileSync(path.join(__dirname, 'assets', 'out', f)).toString('base64'); } catch (e) { return ''; } };
 var ic96 = b64('icon-192.png');
 var fonts = ic96 ? '<link rel="icon" type="image/png" href="data:image/png;base64,' + ic96 + '"><link rel="apple-touch-icon" href="data:image/png;base64,' + ic96 + '">' : '';
