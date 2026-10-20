@@ -103,32 +103,60 @@
     g.gain.setValueAtTime(vol || .12, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
     o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + d + .02);
   }
+  /* Bruitages synthétisés (aucun fichier) : plume, tampon, parchemin, pinceau, révélation */
+  var NB = null, sfxLast = {};
+  function noiseBuf(a) {
+    if (NB && NB.sampleRate === a.sampleRate) return NB;
+    NB = a.createBuffer(1, a.sampleRate * 2, a.sampleRate);
+    var d = NB.getChannelData(0), b0 = 0;
+    for (var i = 0; i < d.length; i++) { var w = Math.random() * 2 - 1; b0 = .97 * b0 + .03 * w; d[i] = w * .6 + b0 * 3; }
+    return NB;
+  }
+  /* souffle de bruit filtré : f0→f1 (Hz), q, durée, volume, attaque, départ différé */
+  function hiss(f0, f1, q, dur, vol, att, when, type) {
+    var a = audio(); if (!a) return;
+    var t0 = a.currentTime + (when || 0), s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+    s.buffer = noiseBuf(a); s.loop = true;
+    fl.type = type || 'bandpass'; fl.Q.value = q || 1; fl.frequency.setValueAtTime(f0, t0);
+    if (f1 && f1 !== f0) fl.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    g.gain.setValueAtTime(.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + (att || .01)); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+    s.connect(fl); fl.connect(g); g.connect(a.destination);
+    s.start(t0, Math.random() * 1.5); s.stop(t0 + dur + .03);
+  }
+  function bell(f, when, vol, dur) {
+    tone(f, dur || .9, 'sine', vol, when); tone(f * 2.01, (dur || .9) * .6, 'sine', vol * .35, when); tone(f * 3.97, (dur || .9) * .3, 'sine', vol * .12, when);
+  }
   function sfx(name) {
     try {
-      if (name === 'stamp') { tone(150, .16, 'sine', .22, 0, 60); tone(900, .04, 'square', .03); }
+      var now = Date.now();
+      var gap = { scratch: 75, brush: 90, rustle: 250 }[name];
+      if (gap) { if (now - (sfxLast[name] || 0) < gap) return; sfxLast[name] = now; }
+      if (name === 'stamp') { tone(150, .16, 'sine', .24, 0, 55); hiss(1800, 600, .8, .07, .08, .002); hiss(300, 120, .7, .1, .1, .003, .01, 'lowpass'); }
       else if (name === 'pick') tone(520, .05, 'triangle', .08);
+      else if (name === 'scratch') { var r = Math.random(); hiss(2600 + r * 2200, 1800 + r * 900, 2.2, .07 + r * .05, .05 + r * .03, .006); }
+      else if (name === 'scratchend') { hiss(3600, 1500, 1.6, .16, .06, .004); tone(2200, .03, 'square', .012); }
+      else if (name === 'brush') { hiss(900 + Math.random() * 500, 500, .7, .2, .05, .05, 0, 'lowpass'); }
       else if (name === 'draw') tone(330, .05, 'sawtooth', .03);
+      else if (name === 'rustle') { hiss(5200, 2400, .6, .34, .05, .03); hiss(3200, 1400, .9, .22, .04, .02, .08); hiss(6500, 3000, 1.2, .08, .035, .004, .21); }
+      else if (name === 'reveal') { bell(784, 0, .07, .9); bell(988, .13, .07, .9); bell(1319, .26, .08, 1.3); hiss(8000, 6000, 2, .5, .015, .1, .25, 'highpass'); }
       else if (name === 'chime') { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .5, 'triangle', .11, i * .12); }); }
       else if (name === 'low') tone(196, .3, 'triangle', .1);
       else if (name === 'star') { tone(880, .35, 'triangle', .13); tone(1318, .45, 'sine', .07, .05); }
     } catch (e) {}
   }
 
-  /* ───────────── musique : fondus entre écrans, boucle sans coupure ───────────── */
+  /* ───────────── musique : fichiers à part, fondus entre écrans, boucle sans coupure ───────────── */
   var MUSIC = window.MUSIC || {}, MVOL = .6, MX = 5;
-  var mus = { tr: {}, unlocked: false, last: 0 };
+  var mus = { tr: {}, unlocked: false, last: 0, once: null, dk: 1 };
   function mpick(list) { for (var i = 0; i < list.length; i++) if (MUSIC[list[i]]) return list[i]; return null; }
   function musicWant() {
     if (!save.settings.music || document.hidden) return null;
+    if (mus.once && mus.once.excl) return null;                       /* morceau de fin : seul sur scène */
     var s = S.screen;
     if (s === 'title') return mpick(['titre']);
     if (s === 'atlas' || s === 'briefing') return mpick(['atlas', 'titre']);
     if (s === 'free') return mpick(['libre', 'atlas', 'titre']);
-    if (s === 'game' && S.level) {
-      if (S.free) return mpick(['libre']);
-      if (S.phase === 'result') return mpick(['c' + S.level.id]);
-      return mpick(['c' + S.level.id]);
-    }
+    if (s === 'game' && S.level) return S.free ? mpick(['libre']) : mpick(['c' + S.level.id]);
     return null;
   }
   function mtrack(name) {
@@ -139,8 +167,30 @@
     return mus.tr[name];
   }
   function mclamp(v) { return Math.max(0, Math.min(1, v)); }
+  /* jingle (duck : la musique de fond baisse pendant ce temps) ou morceau de fin (excl : tout le reste se tait) */
+  function playOnce(name, o) {
+    if (!MUSIC[name] || !save.settings.music || !mus.unlocked) return;
+    musicStopOnce(true);
+    var a = new Audio(MUSIC[name]); a.volume = o && o.vol != null ? o.vol : .8;
+    var rec = { a: a, excl: !!(o && o.excl), duck: !!(o && o.duck), v: a.volume, fade: false };
+    a.onended = function () { if (mus.once === rec) mus.once = null; };
+    mus.once = rec;
+    var p = a.play(); if (p && p.catch) p.catch(function () { if (mus.once === rec) mus.once = null; });
+  }
+  function musicStopOnce(now) {
+    var r = mus.once; if (!r) return;
+    if (now) { try { r.a.pause(); } catch (e) {} mus.once = null; } else r.fade = true;
+  }
   function musicTick() {
     var now = Date.now(), dt = Math.min(.25, (now - mus.last) / 1000); mus.last = now;
+    var R = mus.once;
+    if (R) {
+      if (R.fade) { R.v = Math.max(0, R.v - dt / 1.2); try { R.a.volume = R.v; } catch (e) {} if (R.v <= 0) musicStopOnce(true); }
+      else if (document.hidden) { if (!R.a.paused) R.a.pause(); }
+      else if (R.a.paused && !R.a.ended) { var q = R.a.play(); if (q && q.catch) q.catch(function () {}); }
+      if (mus.once && !save.settings.music) musicStopOnce(true);
+    }
+    mus.dk += ((mus.once && mus.once.duck ? .18 : 1) - mus.dk) * Math.min(1, dt * 5);
     var want = mus.unlocked ? musicWant() : null;
     if (want) mtrack(want);
     Object.keys(mus.tr).forEach(function (name) {
@@ -159,7 +209,7 @@
         if (el.paused) return;
         var dd = el.duration, f = 1;
         if (isFinite(dd) && dd > MX * 2) { f = Math.min(1, (dd - el.currentTime) / MX); if (el.ramp) f = Math.min(f, el.currentTime / MX); if (el.currentTime > MX) el.ramp = false; }
-        try { el.volume = mclamp(T.g * MVOL * mclamp(f)); } catch (x) {}
+        try { el.volume = mclamp(T.g * MVOL * mus.dk * mclamp(f)); } catch (x) {}
       });
     });
   }
@@ -176,8 +226,8 @@
     var el = $('#toast'); el.textContent = msg; el.classList.add('on');
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2200);
   }
-  function modal(nodes) { var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
-  function closeModal() { $('#modal').classList.remove('on'); }
+  function modal(nodes) { if (!$('#modal').classList.contains('on')) sfx('rustle'); var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
+  function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── navigation ───────────── */
   function go(name) {
@@ -296,8 +346,9 @@
   /* ───────────── fin du jeu : publier la vraie carte, ou garder le secret ───────────── */
   function lastDone() { var L = LEVELS[LEVELS.length - 1], p = save.progress[L.id]; return !!(p && p.stars >= 1); }
   function endingScene(kind) { return Art.src('scenes.' + (kind === 'publish' ? 'voyageurs' : 'enveloppe')); }
-  function openEnding() {
+  function openEnding(replay) {
     var done = save.ending;
+    if (done && replay === true) playOnce(done === 'publish' ? 'fin-publier' : 'fin-secret', { excl: true, vol: .75 });
     var kids = [h('h2', { text: t('endingTitle') })];
     if (done) {
       var im = endingScene(done); if (im) kids.push(h('img', { class: 'bigthumb', src: im, alt: '', style: 'width:100%;max-height:260px;object-fit:cover' }));
@@ -309,8 +360,8 @@
     } else {
       kids.push(h('p', { text: t('endingText') }));
       kids.push(h('div', { class: 'btnrow' }, [
-        h('button', { class: 'btn primary', id: 'end-publish', text: t('endingPublish'), onclick: function () { save.ending = 'publish'; save.endingT = Date.now(); persist(); sfx('chime'); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } }),
-        h('button', { class: 'btn', id: 'end-secret', text: t('endingSecret'), onclick: function () { save.ending = 'secret'; save.endingT = Date.now(); persist(); sfx('chime'); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } })
+        h('button', { class: 'btn primary', id: 'end-publish', text: t('endingPublish'), onclick: function () { save.ending = 'publish'; save.endingT = Date.now(); persist(); sfx('chime'); playOnce('fin-publier', { excl: true, vol: .75 }); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } }),
+        h('button', { class: 'btn', id: 'end-secret', text: t('endingSecret'), onclick: function () { save.ending = 'secret'; save.endingT = Date.now(); persist(); sfx('chime'); playOnce('fin-secret', { excl: true, vol: .75 }); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } })
       ]));
       kids.push(h('button', { class: 'linkbtn', text: t('endingLater'), onclick: closeModal }));
     }
@@ -319,7 +370,7 @@
   function endingCard() {
     if (!lastDone()) return null;
     var im = save.ending ? endingScene(save.ending) : (Art.src('scenes.enveloppe') || null);
-    return h('button', { class: 'region', id: 'region-end', onclick: function () { audio(); openEnding(); } }, [
+    return h('button', { class: 'region', id: 'region-end', onclick: function () { audio(); openEnding(true); } }, [
       im ? h('img', { class: 'thumb', src: im, alt: '' }) : h('div', { class: 'thumb', text: '✒' }),
       h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('endingCard') }), h('div', { class: 'sub', text: save.ending ? t(save.ending === 'publish' ? 'endingPublishShort' : 'endingSecretShort') : t('endingDecide') })])
     ]);
@@ -360,7 +411,7 @@
       h('button', { class: 'btn primary', id: 'btn-start', text: t('start'), onclick: function () { sfx('pick'); startLevel(idx, false); } }),
       h('button', { class: 'linkbtn', text: t('back'), onclick: function () { go('atlas'); } })
     ]));
-    S.screen = 'briefing';
+    S.screen = 'briefing'; sfx('rustle');
     ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { $('#' + n).classList.toggle('on', n === 'briefing'); });
   }
 
@@ -725,13 +776,13 @@
   }
   function askWitness(w) {
     var left = tokensLeft(); if (S.asked[w.id] || left.ask < 1 || !w.ask) return;
-    S.asked[w.id] = true; sfx('chime'); buzz(15);
+    S.asked[w.id] = true; sfx('reveal'); buzz(15);
     S.pins[w.id + ':r'] = true;
     persistProgress(); draw(); renderPanel(); tutCheck();
   }
   function useScout() {
     var left = tokensLeft(); if (left.scout < 1) return;
-    S.scoutsUsed++; S.pins['scout:' + (S.scoutsUsed - 1)] = true; sfx('chime'); buzz(15);
+    S.scoutsUsed++; S.pins['scout:' + (S.scoutsUsed - 1)] = true; sfx('reveal'); buzz(15);
     persistProgress(); draw(); renderPanel(); tutCheck();
   }
 
@@ -813,6 +864,7 @@
     S.resultView = 'diff';
     S.phase = 'result'; S.mode = 'move'; S.armed = null; S.selected = null; S.ruler = null; S.tut = null;
     sfx('chime'); buzz([30, 40, 30]);
+    playOnce(stars >= 1 ? 'jingle-victoire' : 'jingle-echec', { duck: true, vol: .8 });
     fitView(); renderAll();
   }
   function renderResult(p) {
@@ -891,7 +943,7 @@
     if (!LEVELS[S.levelIdx + 1]) {
       pad.appendChild(h('p', { class: 'help', text: t('endOfV0') }));
       if (R.stars >= 1) {
-        pad.appendChild(h('button', { class: 'btn primary', id: 'btn-ending', text: save.ending ? t('endingRevisit') : t('endingDecide'), onclick: openEnding }));
+        pad.appendChild(h('button', { class: 'btn primary', id: 'btn-ending', text: save.ending ? t('endingRevisit') : t('endingDecide'), onclick: function () { openEnding(true); } }));
         if (anim && !save.ending) setTimeout(function () { if (S.phase === 'result' && !save.ending && !$('#modal').classList.contains('on')) openEnding(); }, 3200);
       }
     }
@@ -1426,11 +1478,11 @@
       else if (G.type === 'ruler') { var w = snapToStamp(s2w(p.x, p.y)); S.ruler = { a: G.a, b: w }; draw(); }
       else if (G.type === 'draw') {
         var wp = s2w(p.x, p.y), last = G.pts[G.pts.length - 1];
-        if (Math.hypot(wp.x - last.x, wp.y - last.y) > .5 / Math.max(1, view.z * .6)) { G.pts.push({ x: clamp(wp.x, -3, 103), y: clamp(wp.y, -3, 103) }); draw(); }
+        if (Math.hypot(wp.x - last.x, wp.y - last.y) > .5 / Math.max(1, view.z * .6)) { G.pts.push({ x: clamp(wp.x, -3, 103), y: clamp(wp.y, -3, 103) }); sfx('scratch'); draw(); }
       }
       else if (G.type === 'brush') {
         var wq = s2w(p.x, p.y), lp = G.stroke.pts[G.stroke.pts.length - 1];
-        if (Math.hypot(wq.x - lp[0], wq.y - lp[1]) > .5) { G.stroke.pts.push([round1(wq.x), round1(wq.y)]); draw(); }
+        if (Math.hypot(wq.x - lp[0], wq.y - lp[1]) > .5) { G.stroke.pts.push([round1(wq.x), round1(wq.y)]); sfx('brush'); draw(); }
       }
       else if (G.type === 'stamp') {
         if (!G.moved && Math.hypot(p.x - G.sx, p.y - G.sy) > 5) { G.moved = true; snap(); }
@@ -1448,10 +1500,10 @@
       if (!G) return;
       var g = G; G = null;
       if (g.type === 'ruler') { var d = Core.dist(S.ruler.a, S.ruler.b); if (d < 1) S.ruler = null; else S.rulerUsed = true; draw(); tutCheck(); }
-      else if (g.type === 'brush') { snap(); S.free.cur.strokes.push(g.stroke); sfx('draw'); changed(); }
+      else if (g.type === 'brush') { snap(); S.free.cur.strokes.push(g.stroke); changed(); }
       else if (g.type === 'draw') {
         var pts = g.pts, len = 0; for (var i = 1; i < pts.length; i++) len += Core.dist(pts[i - 1], pts[i]);
-        if (pts.length >= 2 && len > 6) { snap(); var pid = g.path; if (S.free && pid === '__new') pid = addFreePath(S.freePath); S.drawn[pid] = Core.simplify(pts, .7); S.mode = 'move'; S.activePath = null; sfx('draw'); buzz(8); changed(); renderHint(); } else draw();
+        if (pts.length >= 2 && len > 6) { snap(); var pid = g.path; if (S.free && pid === '__new') pid = addFreePath(S.freePath); S.drawn[pid] = Core.simplify(pts, .7); S.mode = 'move'; S.activePath = null; sfx('scratchend'); buzz(8); changed(); renderHint(); } else draw();
       }
       else if (g.type === 'stamp') {
         if (g.moved) {
@@ -1672,7 +1724,7 @@
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
-    window.__cart = { mus: mus, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    window.__cart = { mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

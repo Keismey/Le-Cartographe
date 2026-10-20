@@ -5,7 +5,7 @@ var S = function (f) { return fs.readFileSync(path.join(__dirname, 'src', f), 'u
 var css = S('fonts.css') + S('style.css');
 var musicJs = (function () {
   var dir = path.join(__dirname, 'assets', 'music'), o = {};
-  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'data:audio/mpeg;base64,' + fs.readFileSync(path.join(dir, f)).toString('base64'); }); } catch (e) {}
+  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f; }); } catch (e) {}
   return 'window.MUSIC=' + JSON.stringify(o) + ';';
 })();
 var js = ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'terrain.js', 'art.js', 'cloud.js'].map(S).join('\n;\n') + '\n;\n' + musicJs + '\n;\n' + S('app.js');
@@ -25,6 +25,10 @@ var frag = '<title>' + title + '</title>\n<meta name="claude:viewport-fit-sides"
 
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
 ['icon-192.png', 'icon-512.png'].forEach(function (f) { try { fs.copyFileSync(path.join(__dirname, 'assets', 'out', f), path.join(__dirname, 'dist', f)); } catch (e) {} });
+try {
+  fs.mkdirSync(path.join(__dirname, 'dist', 'music'), { recursive: true });
+  fs.readdirSync(path.join(__dirname, 'assets', 'music')).forEach(function (f) { fs.copyFileSync(path.join(__dirname, 'assets', 'music', f), path.join(__dirname, 'dist', 'music', f)); });
+} catch (e) {}
 fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), full);
 fs.writeFileSync(path.join(__dirname, 'dist', 'artifact.html'), frag);
 console.log('index.html ' + Math.round(full.length / 1024) + ' Ko · artifact.html ' + Math.round(frag.length / 1024) + ' Ko');
