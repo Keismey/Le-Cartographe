@@ -2616,7 +2616,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     pinned.forEach(function (e) {
       var txt = e.kind === 'reply' ? e.reply : e.st.text;
       el.appendChild(h('button', { class: 'rb', 'aria-label': t('unpin'), onclick: function () { delete S.pins[e.key]; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); } }, [
-        e.w && e.w.id ? portrait(e.w, 'xs') : (ico('jeton_eclaireur', 'xs') || null), h('span', { text: loc(txt) }), h('i', { text: '×' })
+        h('span', { text: loc(txt) }), h('i', { text: '×' })
       ]));
     });
   }
