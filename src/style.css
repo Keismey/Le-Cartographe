@@ -531,3 +531,7 @@ img.bigthumb { width: min(100%, 300px); align-self: center; border-radius: 6px; 
 .kingmodal small { font-family: var(--font-sc); letter-spacing: .08em; color: #8a5a1c; text-transform: uppercase; font-size: .78em; }
 .kingtext { white-space: pre-line; font-family: var(--font-display); font-style: italic; font-size: 1.12em; line-height: 1.4; margin: 6px 0 10px; }
 #modal .hint { margin-bottom: 14px; padding: 8px 10px; border-left: 3px solid #b8913a; background: rgba(184,145,58,.14); font-size: .92em; }
+
+.region { flex: 0 0 auto; height: auto; }
+.region .meta { overflow-wrap: anywhere; }
+img.bigthumb { width: min(100%, 340px); height: auto; }

@@ -379,7 +379,7 @@
   /* ───────────── fiche d'une contrée terminée : voir / exporter la carte, ou rejouer ───────────── */
   function openFinished(idx) {
     var L = LEVELS[idx], p = save.progress[L.id], m = p && p.map;
-    var src = thumbFor(L, p);
+    var src = bigThumbFor(L, p);
     var kids = [h('h2', { text: loc(L.title) })];
     if (src) kids.push(h('img', { class: 'bigthumb', src: src, alt: '' }));
     kids.push(h('div', { class: 'scoreline' }, [starsText(p.stars), h('span', { text: ' ' + (m ? t('mapScore', { s: Math.round(m.score) }) : t('best', { s: Math.round(p.score) })) })]));
@@ -976,12 +976,20 @@
     return { level: L, placed: placed, drawn: drawn, sc: sc };
   }
   var thumbCache = {};
-  function makeThumb(fin) {
+  function makeThumb(fin, size) {
     try {
-      var c = document.createElement('canvas'); c.width = c.height = 168;
-      var x = c.getContext('2d'); paint(x, 168, 168, fitFor(168, 168, .86), { u: .5, thumb: true, final: fin, dpr: 1 });
-      return c.toDataURL('image/jpeg', .72);
+      var N = size || 168, c = document.createElement('canvas'); c.width = c.height = N;
+      var x = c.getContext('2d'); paint(x, N, N, fitFor(N, N, .86), { u: N / 336, thumb: true, final: fin, dpr: 1 });
+      return c.toDataURL('image/jpeg', size ? .88 : .72);
     } catch (e) { return null; }
+  }
+  /* grande vignette nette pour la fiche d'une contrée terminée */
+  var bigCache = {};
+  function bigThumbFor(L, p) {
+    if (!p || !p.map) return thumbFor(L, p);
+    var key = L.id + ':' + (p.map.t || 0) + ':' + Math.round(p.map.score * 10) + ':' + I.lang;
+    if (!bigCache[key]) bigCache[key] = makeThumb(finalFor(L, p.map), 720);
+    return bigCache[key] || thumbFor(L, p);
   }
   function thumbFor(L, p) {
     if (p && p.map) {
