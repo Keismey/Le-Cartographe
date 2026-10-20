@@ -5,6 +5,10 @@
   var DEG = 180 / Math.PI;
   var CAPS = { N: 90, NE: 45, E: 0, SE: -45, S: -90, SW: -135, W: 180, NW: 135 };
 
+  /* De nuit (forêt qui bouge), l'est et l'ouest sont inversés : ce que dit le témoin est le miroir de la vérité. */
+  var FLIP = { NE: 'NW', NW: 'NE', SE: 'SW', SW: 'SE', E: 'W', W: 'E', N: 'N', S: 'S' };
+  function effCap(st) { return st.night && st.cap ? FLIP[st.cap] : st.cap; }
+
   function norm180(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
   function angDiff(a, b) { return Math.abs(norm180(a - b)); }
   function dist(p, q) { return Math.hypot(p.x - q.x, p.y - q.y); }
@@ -119,7 +123,7 @@
     if (st.k === 'rel') {
       var A = ctx.pos(st.a), B = ctx.pos(st.b);
       if (st.cap) {
-        var br = bearing(B, A), ad = angDiff(br, CAPS[st.cap]);
+        var br = bearing(B, A), ad = angDiff(br, CAPS[effCap(st)]);
         detail.bearing = br; detail.angDiff = ad;
         viol((ad - angTol) / angTol);
       }
@@ -144,7 +148,7 @@
       idsOf(st.a).forEach(function (id) { var dd2 = polyClosest(ctx.pos(id), poly).d; viol((dd2 - rr) / rr); });
     } else if (st.k === 'side') {
       var poly2 = ctx.path(st.path), P = ctx.pos(st.a), q = polyClosest(P, poly2);
-      if (q.d >= 3) { var adj = angDiff(bearing(q, P), CAPS[st.cap]); viol((adj - 60) / 60); }
+      if (q.d >= 3) { var adj = angDiff(bearing(q, P), CAPS[effCap(st)]); viol((adj - 60) / 60); }
     } else if (st.k === 'opp') {
       var poly3 = ctx.path(st.path);
       if (sideSign(ctx.pos(st.a), poly3) === sideSign(ctx.pos(st.b), poly3)) cost += 1;
@@ -232,7 +236,7 @@
   }
 
   var Core = {
-    CAPS: CAPS, angDiff: angDiff, dist: dist, bearing: bearing, toPts: toPts,
+    CAPS: CAPS, effCap: effCap, angDiff: angDiff, dist: dist, bearing: bearing, toPts: toPts,
     polyClosest: polyClosest, sideSign: sideSign, resample: resample, chamfer: chamfer,
     simplify: simplify, needs: needs, evalStatement: evalStatement,
     align: align, applyAlign: applyAlign, score: score, stars: stars

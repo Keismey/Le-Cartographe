@@ -31,7 +31,7 @@ Levels.forEach(function (L) {
         honest.push({ st: st, w: w }); mark(st);
       }
     });
-    ok(!!w.ask, w.id + ' a une réponse au jeton Question');
+    ok(!!w.ask || !!w.sealed, w.id + ' a une réponse au jeton Question');
   });
   L.scouts.forEach(function (st) {
     var r = Core.evalStatement(st, truthCtx(L, {}));

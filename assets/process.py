@@ -114,6 +114,17 @@ A['icon'] = b64(ic.resize((96, 96), Image.LANCZOS), 82)
 A['ui'].update(sprites(RAW + 'ui-gestes.jpg', ['main', 'annuler', 'corbeille', 'cible', 'engrenage', 'retour'], 3, 2, 120, holes=('cible', 'engrenage')))
 A['ui'].update(sprites(RAW + 'ui-libre.jpg', ['crayon', 'gomme', 'pinceau', 'zoom_plus', 'zoom_moins', 'poing'], 3, 2, 120))
 
+# --- lot 5 : lieux (côte, divers, forêt), portraits 3-5, scènes des contrées 3 à 8 et des fins ---
+A['stamps'].update(sprites(RAW + 'lieux-cote.jpg', ['phare', 'port', 'crique', 'epave', 'ile', 'plage_noire'], 3, 2, 200))
+A['stamps'].update(sprites(RAW + 'lieux-divers.jpg', ['carriere', 'val_perdu', 'croisee', 'fin_route', 'prairie', 'pierres'], 3, 2, 200))
+A['stamps'].update(sprites(RAW + 'lieux-foret.jpg', ['bois_clair', 'foret_sombre', 'chene', 'cabane_bucheron', 'cabane_sorciere', 'mare'], 3, 2, 200))
+A['portraits'].update(portraits(RAW + 'portraits-3.jpg', ['morgane', 'valmont', 'barbedouce', 'orlan_sage'], 256))
+A['portraits'].update(portraits(RAW + 'portraits-4.jpg', ['yann', 'lise', 'marcos', 'brigitte'], 256))
+A['portraits'].update(portraits(RAW + 'portraits-5.jpg', ['tom', 'hugo', 'gil', 'fee'], 256))
+for k, f in [('falaise', 'scene-falaise'), ('paturage', 'scene-paturage'), ('foret_nuit', 'scene-foret-nuit'), ('iles', 'scene-iles'), ('ruines', 'scene-ruines'), ('voyageurs', 'scene-voyageurs')]:
+    A['scenes'][k] = scene(RAW + f + '.jpg')
+A['scenes']['enveloppe'] = scene(RAW + 'scene-enveloppe.jpg', w=540)
+
 js = '/* Généré par assets/process.py — ne pas modifier à la main */\nwindow.ASSETS = ' + json.dumps(A, separators=(',', ':')) + ';\n'
 open('/home/claude/cartographe/src/assets.js', 'w').write(js)
 print('assets.js', round(len(js) / 1024), 'Ko')

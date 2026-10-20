@@ -54,7 +54,7 @@
   function mergeRemote(r) {
     var ch = false, id;
     if (r.core && (r.core.t || 0) > (save.t || 0)) {
-      ['settings', 'notes', 'tutDone', 'started'].forEach(function (k) { if (r.core[k] !== undefined) save[k] = r.core[k]; });
+      ['settings', 'notes', 'tutDone', 'started', 'ending', 'endingT'].forEach(function (k) { if (r.core[k] !== undefined) save[k] = r.core[k]; });
       ch = true;
     }
     if (r.free) { save.free = save.free || { maps: [], seq: 0 }; save.free.seq = Math.max(save.free.seq || 0, r.free.seq || 0); save.free.del = (save.free.del || []).concat((r.free.del || []).filter(function (x) { return (save.free.del || []).indexOf(x) < 0; })); }
@@ -79,7 +79,7 @@
     placed: {}, drawn: {}, asked: {}, scoutsUsed: 0, suspects: {}, pins: {},
     mode: 'move', activePath: null, ghost: false, panel: 'tools', openCard: null,
     selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false,
-    free: null, resultView: 'diff', brush: null, brushKey: '', brushSize: 6, freePath: null
+    free: null, resultView: 'diff', brush: null, brushKey: '', brushSize: 6, freePath: null, tf: 'all'
   };
   var view = { z: 1, s0: 3, ox: 0, oy: 0 };
   var COL = { ok: '#3f8a52', ko: '#c4382c', near: '#c58a1d' };
@@ -227,10 +227,7 @@
       body.appendChild(btn);
     });
     body.appendChild(freeCard());
-    body.appendChild(h('div', { class: 'region', style: 'opacity:.6;cursor:default' }, [
-      h('div', { class: 'thumb', text: '…' }),
-      h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('soon') }), h('div', { class: 'sub', text: t('soonText') })])
-    ]));
+    var endc = endingCard(); if (endc) body.appendChild(endc);
     body.appendChild(h('h3', { class: 'sec', text: t('orlanNotes') }));
     var ns = h('div', { class: 'notes' }), any = false;
     LEVELS.forEach(function (L) {
@@ -239,6 +236,38 @@
     if (!any) ns.appendChild(h('p', { class: 'help', text: t('noNotes') }));
     body.appendChild(ns);
     el.appendChild(body);
+  }
+
+  /* ───────────── fin du jeu : publier la vraie carte, ou garder le secret ───────────── */
+  function lastDone() { var L = LEVELS[LEVELS.length - 1], p = save.progress[L.id]; return !!(p && p.stars >= 1); }
+  function endingScene(kind) { return Art.src('scenes.' + (kind === 'publish' ? 'voyageurs' : 'enveloppe')); }
+  function openEnding() {
+    var done = save.ending;
+    var kids = [h('h2', { text: t('endingTitle') })];
+    if (done) {
+      var im = endingScene(done); if (im) kids.push(h('img', { class: 'bigthumb', src: im, alt: '', style: 'width:100%;max-height:260px;object-fit:cover' }));
+      kids.push(h('p', { text: t(done === 'publish' ? 'endingPublishText' : 'endingSecretText') }));
+      kids.push(h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn', id: 'end-change', text: t('endingDecide'), onclick: function () { save.ending = null; persist(); openEnding(); } }),
+        h('button', { class: 'btn primary', text: t('close'), onclick: closeModal })
+      ]));
+    } else {
+      kids.push(h('p', { text: t('endingText') }));
+      kids.push(h('div', { class: 'btnrow' }, [
+        h('button', { class: 'btn primary', id: 'end-publish', text: t('endingPublish'), onclick: function () { save.ending = 'publish'; save.endingT = Date.now(); persist(); sfx('chime'); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } }),
+        h('button', { class: 'btn', id: 'end-secret', text: t('endingSecret'), onclick: function () { save.ending = 'secret'; save.endingT = Date.now(); persist(); sfx('chime'); openEnding(); if ($('#atlas').classList.contains('on')) renderAtlas(); } })
+      ]));
+      kids.push(h('button', { class: 'linkbtn', text: t('endingLater'), onclick: closeModal }));
+    }
+    modal(kids);
+  }
+  function endingCard() {
+    if (!lastDone()) return null;
+    var im = save.ending ? endingScene(save.ending) : (Art.src('scenes.enveloppe') || null);
+    return h('button', { class: 'region', id: 'region-end', onclick: function () { audio(); openEnding(); } }, [
+      im ? h('img', { class: 'thumb', src: im, alt: '' }) : h('div', { class: 'thumb', text: '✒' }),
+      h('div', { class: 'meta' }, [h('div', { class: 'nm', text: t('endingCard') }), h('div', { class: 'sub', text: save.ending ? t(save.ending === 'publish' ? 'endingPublishShort' : 'endingSecretShort') : t('endingDecide') })])
+    ]);
   }
 
   /* ───────────── fiche d'une contrée terminée : voir / exporter la carte, ou rejouer ───────────── */
@@ -289,7 +318,7 @@
     S.asked = ip ? ip.asked || {} : {}; S.scoutsUsed = ip ? ip.scoutsUsed || 0 : 0;
     S.suspects = ip ? ip.suspects || {} : {}; S.pins = ip ? ip.pins || {} : {};
     S.mode = 'move'; S.activePath = null; S.ghost = false; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
-    S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null;
+    S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null; S.tf = 'all';
     if (L.id === 1 && !save.tutDone && !ip) { S.tut = { step: 1 }; S.panel = 'notebook'; }
     save.started = true; persist();
     go('game'); renderAll();
@@ -554,9 +583,30 @@
     if (status === 'ko') return h('span', { class: 'badge ko', title: t('statusKo'), 'aria-label': t('statusKo') }, [vIcon('ko')]);
     return h('span', { class: 'badge na', title: t('statusNa'), 'aria-label': t('statusNa'), text: '·' });
   }
+  var OPPCAP = { N: 'S', S: 'N', E: 'W', W: 'E', NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW' };
+  function sigOf(st) {
+    var n = Core.needs(st), cap = Core.effCap(st);
+    if (st.k === 'rel' && !Array.isArray(st.a) && !Array.isArray(st.b)) {
+      var a = st.a, b = st.b;
+      if (a > b) { var tmp = a; a = b; b = tmp; cap = cap ? OPPCAP[cap] : cap; }
+      return 'rel|' + a + '|' + b + '|' + (cap || (st.near ? 'near' : 'd'));
+    }
+    return st.k + '|' + n.places.join(',') + '|' + n.paths.join(',') + '|' + (cap || '');
+  }
+  /* « source unique » : aucun autre témoin n'affirme la même chose */
+  function isSingle(e) {
+    if (!S.level.single || e.kind !== 'say') return false;
+    var sg = sigOf(e.st);
+    return !S.level.witnesses.some(function (w) {
+      return w.id !== e.w.id && w.statements.some(function (o) { return sigOf(o) === sg; });
+    });
+  }
   function stmtRow(e) {
     var pinned = !!S.pins[e.key];
     var tag = e.kind === 'reply' ? t('reply') : (e.kind === 'scout' ? t('scoutVerified') : null);
+    var single = isSingle(e);
+    if (!tag && e.st.night) tag = t('night'); else if (!tag && e.st.day) tag = t('day');
+    if (single) tag = (tag ? tag + ' · ' : '') + t('single');
     var txt = e.kind === 'reply' ? e.reply : e.st.text;
     var togglePin = function () { if (S.pins[e.key]) delete S.pins[e.key]; else S.pins[e.key] = true; sfx('pick'); persistProgress(); draw(); renderPanel(); renderRibbon(); };
     var row = h('div', { class: 'stmt' + (pinned ? ' pinned' : ''), 'data-key': e.key, onclick: togglePin }, [
@@ -573,6 +623,14 @@
     ]);
     pad.appendChild(tb);
     if (!S.scoutsUsed && !Object.keys(S.asked).length) pad.appendChild(h('p', { class: 'help', text: t('tokenHelp') }));
+    if (L.night) {
+      pad.appendChild(h('p', { class: 'help', text: t('nightRule') }));
+      pad.appendChild(h('div', { class: 'seg', role: 'group', id: 'tfilter' }, [['all', t('fAll')], ['day', t('fDay')], ['night', t('fNight')]].map(function (o) {
+        return h('button', { class: 'btn' + (S.tf === o[0] ? ' on' : ''), 'data-tf': o[0], 'aria-pressed': S.tf === o[0] ? 'true' : 'false', text: o[1], onclick: function () { S.tf = o[0]; sfx('pick'); renderPanel(); } });
+      })));
+    }
+    if (L.single) pad.appendChild(h('p', { class: 'help', text: t('singleHint') }));
+    if (L.fog) pad.appendChild(h('p', { class: 'help', text: t('fogHint') }));
     if (S.scoutsUsed) {
       var sc = h('div', { class: 'card open' }, [
         h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm'), ' ' + t('scoutCardTitle')])].concat(
@@ -582,7 +640,7 @@
     }
     L.witnesses.forEach(function (w) {
       var open = S.openCard === w.id;
-      var ents = entries().filter(function (e) { return e.w && e.w.id === w.id; });
+      var ents = entries().filter(function (e) { return e.w && e.w.id === w.id && !(L.night && ((S.tf === 'day' && e.st.night) || (S.tf === 'night' && e.st.day))); });
       var card = h('div', { class: 'card' + (open ? ' open' : ''), 'data-w': w.id }, [
         h('button', { class: 'card-h', style: 'display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit', 'aria-expanded': open ? 'true' : 'false',
           onclick: function () { S.openCard = open ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [
@@ -597,7 +655,7 @@
       ents.forEach(function (e) { inner.appendChild(stmtRow(e)); });
       var asked = !!S.asked[w.id];
       var canAsk = !asked && left.ask > 0;
-      inner.appendChild(h('div', { class: 'actions' }, [
+      if (w.ask) inner.appendChild(h('div', { class: 'actions' }, [
         h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, onclick: function () { askWitness(w); } }, [!asked && left.ask > 0 ? ico('jeton_question', 'sm') : null, ' ' + (asked ? t('alreadyAsked') : (left.ask > 0 ? t('ask', { n: left.ask }) : t('noToken')))])
       ]));
       var lab = h('label', { class: 'check' }, [
@@ -775,7 +833,13 @@
       });
       pad.appendChild(box);
     }
-    if (!LEVELS[S.levelIdx + 1]) pad.appendChild(h('p', { class: 'help', text: t('endOfV0') }));
+    if (!LEVELS[S.levelIdx + 1]) {
+      pad.appendChild(h('p', { class: 'help', text: t('endOfV0') }));
+      if (R.stars >= 1) {
+        pad.appendChild(h('button', { class: 'btn primary', id: 'btn-ending', text: save.ending ? t('endingRevisit') : t('endingDecide'), onclick: openEnding }));
+        if (anim && !save.ending) setTimeout(function () { if (S.phase === 'result' && !save.ending && !$('#modal').classList.contains('on')) openEnding(); }, 3200);
+      }
+    }
     pad.appendChild(h('button', { class: 'btn', id: 'btn-export', onclick: function () { exportPNG(); } }, [ico('enveloppe', 'sm'), ' ' + t('export_')]));
     p.appendChild(pad);
   }
@@ -1102,7 +1166,7 @@
     var ink = 'rgba(58,44,28,.8)', fx = X(0), fy = Y(100), fs = 100 * sc;
     /* remplissage du terrain : zones au crayon pâle (carte finie, mode libre) */
     var tzones = null, tstrokes = null, tbase = null;
-    if (FIN) { if (FIN.free) { tzones = []; tstrokes = FIN.strokes || []; } else { tzones = L.terrain || []; tbase = 'plain'; tstrokes = FIN.strokes || null; } }
+    if (FIN) { if (FIN.free) { tzones = []; tstrokes = FIN.strokes || []; } else { tzones = L.terrain || []; tbase = L.tbase || 'plain'; tstrokes = FIN.strokes || null; } }
     else if (FREE) { tzones = []; tstrokes = S.free.cur.strokes.concat(GG && GG.type === 'brush' ? [GG.stroke] : []); }
     if (tzones && window.Terrain) window.Terrain.render(c, W, H, tzones, tstrokes, { X: X, Y: Y, sc: sc }, { u: u, strong: !tzones.length, base: tbase, clip: { x: fx, y: fy, w: fs, h: fs }, dpr: o.dpr || 1 });
     /* cadre gradué */
@@ -1138,10 +1202,24 @@
     }
 
     /* tracés */
-    function drawRiver(pts, alpha, dashed, tint) {
+    function drawRiver(pts, alpha, dashed, type) {
       var sp = pts.map(P); c.save(); c.globalAlpha = alpha; c.lineJoin = 'round'; c.lineCap = 'round';
       if (dashed) { c.strokeStyle = '#b5851c'; c.lineWidth = Math.max(4 * u, 1.3 * sc); c.setLineDash([9 * u, 7 * u]); Art.smooth(c, sp); c.stroke(); }
-      else {
+      else if (type === 'road') {
+        c.strokeStyle = 'rgba(90,62,30,.25)'; c.lineWidth = Math.max(9 * u, 3.2 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#8b6330'; c.lineWidth = Math.max(4.6 * u, 1.6 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#d9bf86'; c.lineWidth = Math.max(1.8 * u, .6 * sc); Art.smooth(c, sp); c.stroke();
+      } else if (type === 'trail') {
+        c.strokeStyle = '#6b5a2e'; c.lineWidth = Math.max(3.4 * u, 1.2 * sc); c.setLineDash([2 * u, 6 * u]); Art.smooth(c, sp); c.stroke();
+      } else if (type === 'coast') {
+        c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = Math.max(11 * u, 3.9 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#2f8a94'; c.lineWidth = Math.max(4.6 * u, 1.6 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#a9e2e0'; c.lineWidth = Math.max(1.8 * u, .6 * sc); c.setLineDash([3 * u, 5 * u]); Art.smooth(c, sp); c.stroke();
+      } else if (type === 'ditch') {
+        c.strokeStyle = 'rgba(60,70,80,.28)'; c.lineWidth = Math.max(9 * u, 3.2 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#5c6b78'; c.lineWidth = Math.max(4 * u, 1.4 * sc); Art.smooth(c, sp); c.stroke();
+        c.strokeStyle = '#9fb3c0'; c.lineWidth = Math.max(1.6 * u, .55 * sc); c.setLineDash([4 * u, 3 * u]); Art.smooth(c, sp); c.stroke();
+      } else {
         c.strokeStyle = 'rgba(52,100,140,.28)'; c.lineWidth = Math.max(11 * u, 3.9 * sc); Art.smooth(c, sp); c.stroke();
         c.strokeStyle = '#3f7aa6'; c.lineWidth = Math.max(5.6 * u, 2 * sc); Art.smooth(c, sp); c.stroke();
         c.strokeStyle = '#a7d2e8'; c.lineWidth = Math.max(2.4 * u, .8 * sc); Art.smooth(c, sp); c.stroke();
@@ -1161,12 +1239,12 @@
       if (R) {
         drawRiver(Core.toPts(pa.truth), .95, true);
         var it = R.sc.items.filter(function (x) { return x.id === pa.id && x.kind === 'path'; })[0];
-        if (it && it.at) { drawRiver(it.at, .55, false); }
+        if (it && it.at) { drawRiver(it.at, .55, false, pa.type); }
       } else {
         var pts = DRN[pa.id];
         var cur = GG && GG.type === 'draw' && GG.path === pa.id ? GG.pts : null;
-        if (cur && cur.length > 1) drawRiver(cur, .6, false);
-        else if (pts && pts.length > 1) { drawRiver(pts, 1, false); if (!o.thumb) pathLabel(pa, pts); }
+        if (cur && cur.length > 1) drawRiver(cur, .6, false, pa.type);
+        else if (pts && pts.length > 1) { drawRiver(pts, 1, false, pa.type); if (!o.thumb) pathLabel(pa, pts); }
       }
     });
 
