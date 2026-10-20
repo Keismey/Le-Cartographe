@@ -481,6 +481,7 @@
     g.appendChild(h('div', { class: 'topbar gutter' }, [
       h('button', { class: 'iconbtn', id: 'btn-exit', 'aria-label': t('atlas'), onclick: function () { if (S.free) { leaveFree(); return; } persistProgress(); go('atlas'); } }, [uiIcon('retour')]),
       h('h2', { id: 'g-title' }),
+      h('button', { class: 'iconbtn kingbtn', id: 'btn-king', 'aria-label': t('kingWord'), onclick: openKing }, [portraitKey('roi', 'xs') || h('span', { text: '👑' })]),
       h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
     ]));
     g.appendChild(h('div', { id: 'tut', class: 'gutter' }));
@@ -573,8 +574,23 @@
       ]));
     });
   }
+  /* La demande du roi, relisible à tout moment pendant le niveau */
+  function openKing() {
+    var L = S.level; if (!L || S.free) return;
+    sfx('rustle');
+    modal([
+      h('div', { class: 'kingmodal' }, [
+        portraitKey('roi', 'md'),
+        h('div', {}, [h('small', { text: t('region', { n: L.id }) }), h('h2', { text: loc(L.title) })])
+      ]),
+      h('p', { class: 'kingtext', text: loc(L.king) }),
+      h('div', { class: 'hint' }, [h('b', { text: t('kingHint') + ' : ' }), loc(L.hint)]),
+      h('button', { class: 'btn primary', id: 'btn-king-close', text: t('close'), onclick: closeModal })
+    ]);
+  }
   function renderTop() {
     if (!S.level) return;
+    var kb = $('#btn-king'); if (kb) kb.style.display = S.free ? 'none' : '';
     $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : S.level.id + ' · ' + loc(S.level.title);
   }
   function renderBar() {
@@ -1049,6 +1065,9 @@
   function seg(opts, cur, on) {
     return h('div', { class: 'seg' }, opts.map(function (o) { return h('button', { class: 'btn' + (String(cur) === String(o[0]) ? ' on' : ''), text: o[1], onclick: function () { on(o[0]); } }); }));
   }
+  var installEv = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEv = e; });
+  window.addEventListener('appinstalled', function () { installEv = null; });
   function openSettings() {
     var s = save.settings;
     modal([
@@ -1056,6 +1075,7 @@
       h('div', { class: 'setrow' }, [h('span', { text: t('lang') }), seg([['fr', 'Français'], ['en', 'English']], I.lang, function (v) { s.lang = v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('textSize') }), seg([[0, 'A'], [1, 'A+'], [2, 'A++']], s.textSize, function (v) { s.textSize = +v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('colorblind') }), seg([['0', t('off')], ['1', t('on')]], s.cb ? '1' : '0', function (v) { s.cb = v === '1'; persist(); refreshUI(); openSettings(); })]),
+      installEv ? h('div', { class: 'setrow' }, [h('span', { text: t('installApp') }), h('button', { class: 'btn small', id: 'btn-install', text: t('install'), onclick: function () { var ev = installEv; installEv = null; try { ev.prompt(); } catch (x) {} closeModal(); } })]) : null,
       h('div', { class: 'setrow' }, [h('span', { text: t('music') }), seg([['1', t('on')], ['0', t('off')]], s.music !== false ? '1' : '0', function (v) { s.music = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
@@ -1724,7 +1744,7 @@
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
-    window.__cart = { mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    window.__cart = { openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

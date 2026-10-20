@@ -522,3 +522,12 @@ img.bigthumb { width: min(100%, 300px); align-self: center; border-radius: 6px; 
 .mapfloat button.coinb { background: none; border: 0; box-shadow: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
 .mapfloat button.coinb img.ico { width: 46px; height: 46px; object-fit: contain; }
 .mapfloat button#z-fit.coinb img.ico { width: 34px; height: 34px; }
+
+/* ---------- demande du roi, relisible en jeu ---------- */
+.kingbtn { width: 48px; }
+.kingbtn .pf.xs { width: 40px; height: 40px; }
+.kingmodal { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.kingmodal h2 { margin: 0; font-size: 1.2em; }
+.kingmodal small { font-family: var(--font-sc); letter-spacing: .08em; color: #8a5a1c; text-transform: uppercase; font-size: .78em; }
+.kingtext { white-space: pre-line; font-family: var(--font-display); font-style: italic; font-size: 1.12em; line-height: 1.4; margin: 6px 0 10px; }
+#modal .hint { margin-bottom: 14px; padding: 8px 10px; border-left: 3px solid #b8913a; background: rgba(184,145,58,.14); font-size: .92em; }

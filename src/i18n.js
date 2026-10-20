@@ -17,7 +17,7 @@
       back: 'Retour', start: 'Commencer', close: 'Fermer', notYet: 'Pas encore', handIn: 'Remettre', erase: 'Effacer',
       region: 'Contrée {n}', stars: '{n} étoile(s)', best: 'Meilleur : {s} %', locked: 'Verrouillée', soon: 'Bientôt',
       soonText: 'Les contrées 3 à 8 arrivent dans la prochaine version.',
-      kingHint: 'Le roi précise', atlasText: 'Les contrées que vous avez relevées pour le roi.',
+      kingHint: 'Le roi précise', kingWord: 'Le roi', atlasText: 'Les contrées que vous avez relevées pour le roi.',
       orlanNotes: 'Notes d’Orlan', orlanNote: 'Note d’Orlan n°{n}', noNotes: 'Aucune note retrouvée pour l’instant.',
 
       move: 'Déplacer', draw: 'Tracer', drawPath: 'Tracer : {name}', undo: 'Annuler', removeStamp: 'Retirer',
@@ -66,7 +66,7 @@
       endingCard: 'La vraie carte', endingRevisit: 'Revoir la fin', endingDecide: 'Choisir la fin',
       endingPublishShort: 'Vous avez publié la carte.', endingSecretShort: 'Vous avez gardé le secret.',
 
-      settingsTitle: 'Réglages', music: 'Musique', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
+      settingsTitle: 'Réglages', music: 'Musique', installApp: 'Application sur l’écran d’accueil', install: 'Installer', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
       on: 'activé', off: 'désactivé', exportSave: 'Exporter la sauvegarde', importSave: 'Importer une sauvegarde',
       resetYes: 'Effacer', savedOk: 'Sauvegarde importée.', importFail: 'Fichier de sauvegarde illisible.',
       saveText: 'Zone de sauvegarde (copiez ou collez ce texte)', importBtn: 'Importer ce texte',
@@ -115,7 +115,7 @@
       back: 'Back', start: 'Begin', close: 'Close', notYet: 'Not yet', handIn: 'Submit', erase: 'Erase',
       region: 'Region {n}', stars: '{n} star(s)', best: 'Best: {s}%', locked: 'Locked', soon: 'Soon',
       soonText: 'Regions 3 to 8 arrive in the next version.',
-      kingHint: 'The king adds', atlasText: 'The regions you have charted for the king.',
+      kingHint: 'The king adds', kingWord: 'The king', atlasText: 'The regions you have charted for the king.',
       orlanNotes: 'Orlan’s notes', orlanNote: 'Orlan’s note no. {n}', noNotes: 'No notes found yet.',
 
       move: 'Move', draw: 'Draw', drawPath: 'Draw: {name}', undo: 'Undo', removeStamp: 'Remove',
@@ -164,7 +164,7 @@
       endingCard: 'The true map', endingRevisit: 'See the ending again', endingDecide: 'Choose the ending',
       endingPublishShort: 'You published the map.', endingSecretShort: 'You kept the secret.',
 
-      settingsTitle: 'Settings', music: 'Music', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
+      settingsTitle: 'Settings', music: 'Music', installApp: 'App on your home screen', install: 'Install', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
       on: 'on', off: 'off', exportSave: 'Export save', importSave: 'Import a save',
       resetYes: 'Erase', savedOk: 'Save imported.', importFail: 'Unreadable save file.',
       saveText: 'Save area (copy or paste this text)', importBtn: 'Import this text',

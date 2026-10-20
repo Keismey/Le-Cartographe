@@ -15,10 +15,11 @@ var fonts = ic96 ? '<link rel="icon" type="image/png" href="data:image/png;base6
 var body = '<div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div>';
 var title = 'Le Cartographe';
 
+var swReg = '<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>';
 var full = '<!doctype html>\n<html lang="fr"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">' +
-  '<meta name="theme-color" content="#15242c"><title>' + title + '</title>' + fonts +
-  '<style>' + css + '</style></head><body>' + body + '<script>' + js + '</script></body></html>\n';
+  '<meta name="theme-color" content="#15242c"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Le Cartographe"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>' + title + '</title>' + fonts +
+  '<style>' + css + '</style></head><body>' + body + '<script>' + js + '</script>' + swReg + '</body></html>\n';
 
 /* Fragment pour l'outil Artifact : pas de doctype/html/head/body, titre + méta en tête */
 var frag = '<title>' + title + '</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + fonts + '\n<style>' + css + '</style>\n' + body + '\n<script>' + js + '</script>\n';
@@ -32,3 +33,15 @@ try {
 fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), full);
 fs.writeFileSync(path.join(__dirname, 'dist', 'artifact.html'), frag);
 console.log('index.html ' + Math.round(full.length / 1024) + ' Ko · artifact.html ' + Math.round(frag.length / 1024) + ' Ko');
+
+/* ---------- PWA : manifeste + service worker (version = empreinte du contenu) ---------- */
+var crypto = require('crypto');
+var ver = crypto.createHash('sha1').update(full).digest('hex').slice(0, 10);
+fs.writeFileSync(path.join(__dirname, 'dist', 'manifest.webmanifest'), JSON.stringify({
+  name: 'Le Cartographe', short_name: 'Cartographe', description: 'Dessinez le monde, un témoignage à la fois.',
+  lang: 'fr', start_url: './', scope: './', display: 'standalone', orientation: 'portrait',
+  background_color: '#15242c', theme_color: '#15242c',
+  icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }]
+}, null, 2));
+fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver));
+console.log('PWA : version ' + ver);
