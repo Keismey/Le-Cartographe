@@ -1,6 +1,6 @@
 /* Le Cartographe — service worker : page en réseau d'abord (mises à jour), le reste en cache ; musiques mises en cache au fil de l'eau */
 var V = '1841878e47', CORE = 'core-' + V, MUS = 'music-v1';
-var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CORE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));

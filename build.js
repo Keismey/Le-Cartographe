@@ -25,7 +25,7 @@ var full = '<!doctype html>\n<html lang="fr"><head><meta charset="utf-8">' +
 var frag = '<title>' + title + '</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + fonts + '\n<style>' + css + '</style>\n' + body + '\n<script>' + js + '</script>\n';
 
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
-['icon-192.png', 'icon-512.png'].forEach(function (f) { try { fs.copyFileSync(path.join(__dirname, 'assets', 'out', f), path.join(__dirname, 'dist', f)); } catch (e) {} });
+['icon-192.png', 'icon-512.png', 'icon-maskable.png'].forEach(function (f) { try { fs.copyFileSync(path.join(__dirname, 'assets', 'out', f), path.join(__dirname, 'dist', f)); } catch (e) {} });
 try {
   fs.mkdirSync(path.join(__dirname, 'dist', 'music'), { recursive: true });
   fs.readdirSync(path.join(__dirname, 'assets', 'music')).forEach(function (f) { fs.copyFileSync(path.join(__dirname, 'assets', 'music', f), path.join(__dirname, 'dist', 'music', f)); });
@@ -41,7 +41,7 @@ fs.writeFileSync(path.join(__dirname, 'dist', 'manifest.webmanifest'), JSON.stri
   name: 'Le Cartographe', short_name: 'Cartographe', description: 'Dessinez le monde, un témoignage à la fois.',
   lang: 'fr', start_url: './', scope: './', display: 'standalone', orientation: 'portrait',
   background_color: '#15242c', theme_color: '#15242c',
-  icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }]
+  icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }]
 }, null, 2));
 fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver));
 console.log('PWA : version ' + ver);
