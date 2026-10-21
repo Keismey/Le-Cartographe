@@ -537,3 +537,8 @@ img.bigthumb { width: min(100%, 300px); align-self: center; border-radius: 6px; 
 .region { flex: 0 0 auto; height: auto; }
 .region .meta { overflow-wrap: anywhere; }
 img.bigthumb { width: min(100%, 340px); height: auto; }
+
+.notes details { margin-bottom: 8px; }
+.notes summary { cursor: pointer; font-family: var(--font-display); color: #3a2c1c; }
+.notes ul { margin: 6px 0 0; padding-left: 20px; }
+.notes li { margin-bottom: 4px; font-family: var(--font-display); color: #3a2c1c; }

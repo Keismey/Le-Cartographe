@@ -229,6 +229,28 @@
   function modal(nodes) { if (!$('#modal').classList.contains('on')) sfx('rustle'); var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
+  /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
+  var VERSION = '1.0';
+  var PATCH_NOTES = [
+    { v: '1.0', d: ['21 octobre 2026', '21 October 2026'],
+      fr: ['Première version : huit contrées à relever pour le roi, deux fins, un mode libre avec tous les crayons, la musique et les bruitages.', 'Nouveau : bouton retour du téléphone, menu Options commun aux jeux du hub, sauvegarde à exporter ou importer, application installable.'],
+      en: ['First release: eight regions to chart for the king, two endings, a free mode with every pencil, music and sound effects.', 'New: phone back button, the Options menu shared with the hub games, save export and import, installable app.'] }
+  ];
+  function openNotes() {
+    save.pnV = VERSION; persist();
+    var en = I.lang === 'en';
+    modal([
+      h('h2', { text: t('notesBtn') }),
+      h('p', { class: 'help', text: 'Le Cartographe · v' + VERSION }),
+      h('div', { class: 'notes' }, PATCH_NOTES.map(function (n, i) {
+        var d = h('details', null, [h('summary', null, [h('b', { text: 'Version ' + n.v }), ' · ' + n.d[en ? 1 : 0]]), h('ul', null, (en ? n.en : n.fr).map(function (l) { return h('li', { text: l }); }))]);
+        if (!i) d.open = true;
+        return d;
+      })),
+      h('button', { class: 'btn primary', id: 'btn-close', text: t('close'), onclick: closeModal })
+    ]);
+  }
+
   /* ───────────── navigation ───────────── */
   function go(name) {
     S.screen = name;
@@ -1088,6 +1110,7 @@
       h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'optstack' }, [
+        h('button', { class: 'btn', id: 'btn-notes', text: t('notesBtn'), onclick: openNotes }),
         h('button', { class: 'btn', id: 'btn-saveio', text: window.KS ? t('saveIo') : t('exportSave') + ' / ' + t('importSave'), onclick: function () {
           if (window.KS) { closeModal(); persistNow(); window.KS.saveDialog({ lang: I.lang, keys: [KEY, KEY + '.bak'], save: persistNow, file: 'le-cartographe', accent: '#d6b25a' }); } else openSaveIO(); } }),
         window.KS ? h('button', { class: 'btn', id: 'btn-bug', text: t('bugBtn'), onclick: function () { persistNow(); window.KS.bug('Le Cartographe', I.lang); } }) : null,
@@ -1756,6 +1779,8 @@
     try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
+    if (!save.pnV) { var had = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0; if (had) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, 900); else { save.pnV = VERSION; persist(); } }
+    else if (save.pnV !== VERSION) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, 900);
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
 
     /* Bouton retour du téléphone (hub Keismey Studio, voir ks-back.js) */
