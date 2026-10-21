@@ -1087,12 +1087,16 @@
       h('div', { class: 'setrow' }, [h('span', { text: t('music') }), seg([['1', t('on')], ['0', t('off')]], s.music !== false ? '1' : '0', function (v) { s.music = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
-      h('div', { class: 'btnrow' }, [
-        h('button', { class: 'btn', id: 'btn-saveio', text: t('exportSave') + ' / ' + t('importSave'), onclick: openSaveIO }),
+      h('div', { class: 'optstack' }, [
+        h('button', { class: 'btn', id: 'btn-saveio', text: window.KS ? t('saveIo') : t('exportSave') + ' / ' + t('importSave'), onclick: function () {
+          if (window.KS) { closeModal(); persistNow(); window.KS.saveDialog({ lang: I.lang, keys: [KEY, KEY + '.bak'], save: persistNow, file: 'le-cartographe', accent: '#d6b25a' }); } else openSaveIO(); } }),
+        window.KS ? h('button', { class: 'btn', id: 'btn-bug', text: t('bugBtn'), onclick: function () { persistNow(); window.KS.bug('Le Cartographe', I.lang); } }) : null,
+        window.KS ? h('button', { class: 'btn', id: 'btn-support', text: t('supportBtn'), onclick: function () { window.KS.support(); } }) : null,
+        h('button', { class: 'btn', id: 'btn-title', text: t('titleScreen'), onclick: function () { persistNow(); closeModal(); buildTitle(); go('title'); } }),
         h('button', { class: 'btn', id: 'btn-reset', text: t('reset'), onclick: openReset })
       ]),
       h('p', { class: 'help', id: 'save-status', text: (window.Cloud && window.Cloud.active()) ? t('saveCloud') : t('saveLocal') }),
-      h('p', { class: 'help', text: t('about') }),
+      h('p', { class: 'help', text: 'Le Cartographe · ' + t('version') + ' · Keismey Studio. ' + t('about') }),
       h('button', { class: 'btn primary', id: 'btn-close', text: t('close'), onclick: closeModal })
     ]);
   }

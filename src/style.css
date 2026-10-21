@@ -207,6 +207,8 @@ h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
 .maplegend i { display: inline-block; width: 18px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 5px; }
 .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
 .btnrow .btn { flex: 1 1 140px; }
+.optstack { display: flex; flex-direction: column; gap: 8px; }
+.optstack .btn { width: 100%; }
 
 /* fenêtre modale + toast */
 #modal { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,14,18,.72); padding: 16px; }

@@ -5,13 +5,13 @@
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessinez le monde, un témoignage à la fois.',
-      version: 'V0.4 · version test',
+      version: 'V1.0',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
       night: 'De nuit', confirm: 'Remettre cette carte au roi ?', result: 'Score : {s} % · {ok} lieux justes sur {t}',
       liar: '{name} mentait : {motif}', retry: 'Recommencer', next: 'Contrée suivante', export_: 'Exporter la carte (PNG)',
-      settings: 'Réglages', lang: 'Langue', reset: 'Effacer la sauvegarde ?', install: 'Ajouter à l’écran d’accueil',
+      settings: 'Options', lang: 'Langue', reset: 'Effacer la sauvegarde ?', install: 'Ajouter à l’écran d’accueil',
       offline: 'Hors-ligne : tout est prêt.', error: 'Oups, la sauvegarde a échoué.',
 
       back: 'Retour', leaveT: 'Quitter le jeu ?', leaveX: 'Votre progression est enregistrée. Retrouvez les autres jeux de Keismey Studio sur le hub.', toHub: 'Aller au hub', start: 'Commencer', close: 'Fermer', notYet: 'Pas encore', handIn: 'Remettre', erase: 'Effacer',
@@ -66,7 +66,7 @@
       endingCard: 'La vraie carte', endingRevisit: 'Revoir la fin', endingDecide: 'Choisir la fin',
       endingPublishShort: 'Vous avez publié la carte.', endingSecretShort: 'Vous avez gardé le secret.',
 
-      settingsTitle: 'Réglages', music: 'Musique', installApp: 'Application sur l’écran d’accueil', install: 'Installer', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
+      settingsTitle: 'Options', saveIo: 'Sauvegarde : exporter, importer', bugBtn: 'Signaler un bug', supportBtn: 'Soutenir le studio', titleScreen: 'Écran titre', music: 'Musique', installApp: 'Application sur l’écran d’accueil', install: 'Installer', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
       on: 'activé', off: 'désactivé', exportSave: 'Exporter la sauvegarde', importSave: 'Importer une sauvegarde',
       resetYes: 'Effacer', savedOk: 'Sauvegarde importée.', importFail: 'Fichier de sauvegarde illisible.',
       saveText: 'Zone de sauvegarde (copiez ou collez ce texte)', importBtn: 'Importer ce texte',
@@ -103,13 +103,13 @@
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'V0.4 · test version',
+      version: 'V1.0',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
       night: 'At night', confirm: 'Hand this map to the king?', result: 'Score: {s}% · {ok} of {t} places correct',
       liar: '{name} was lying: {motif}', retry: 'Retry', next: 'Next region', export_: 'Export map (PNG)',
-      settings: 'Settings', lang: 'Language', reset: 'Erase save?', install: 'Add to home screen',
+      settings: 'Options', lang: 'Language', reset: 'Erase save?', install: 'Add to home screen',
       offline: 'Offline: all set.', error: 'Oops, saving failed.',
 
       back: 'Back', leaveT: 'Leave the game?', leaveX: 'Your progress is saved. You’ll find the other Keismey Studio games on the hub.', toHub: 'Go to the hub', start: 'Begin', close: 'Close', notYet: 'Not yet', handIn: 'Submit', erase: 'Erase',
@@ -164,7 +164,7 @@
       endingCard: 'The true map', endingRevisit: 'See the ending again', endingDecide: 'Choose the ending',
       endingPublishShort: 'You published the map.', endingSecretShort: 'You kept the secret.',
 
-      settingsTitle: 'Settings', music: 'Music', installApp: 'App on your home screen', install: 'Install', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
+      settingsTitle: 'Options', saveIo: 'Save: export, import', bugBtn: 'Report a bug', supportBtn: 'Support the studio', titleScreen: 'Title screen', music: 'Music', installApp: 'App on your home screen', install: 'Install', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
       on: 'on', off: 'off', exportSave: 'Export save', importSave: 'Import a save',
       resetYes: 'Erase', savedOk: 'Save imported.', importFail: 'Unreadable save file.',
       saveText: 'Save area (copy or paste this text)', importBtn: 'Import this text',
