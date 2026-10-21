@@ -14,7 +14,7 @@
       settings: 'Réglages', lang: 'Langue', reset: 'Effacer la sauvegarde ?', install: 'Ajouter à l’écran d’accueil',
       offline: 'Hors-ligne : tout est prêt.', error: 'Oups, la sauvegarde a échoué.',
 
-      back: 'Retour', start: 'Commencer', close: 'Fermer', notYet: 'Pas encore', handIn: 'Remettre', erase: 'Effacer',
+      back: 'Retour', leaveT: 'Quitter le jeu ?', leaveX: 'Votre progression est enregistrée. Retrouvez les autres jeux de Keismey Studio sur le hub.', toHub: 'Aller au hub', start: 'Commencer', close: 'Fermer', notYet: 'Pas encore', handIn: 'Remettre', erase: 'Effacer',
       region: 'Contrée {n}', stars: '{n} étoile(s)', best: 'Meilleur : {s} %', locked: 'Verrouillée', soon: 'Bientôt',
       soonText: 'Les contrées 3 à 8 arrivent dans la prochaine version.',
       kingHint: 'Le roi précise', kingWord: 'Le roi', atlasText: 'Les contrées que vous avez relevées pour le roi.',
@@ -112,7 +112,7 @@
       settings: 'Settings', lang: 'Language', reset: 'Erase save?', install: 'Add to home screen',
       offline: 'Offline: all set.', error: 'Oops, saving failed.',
 
-      back: 'Back', start: 'Begin', close: 'Close', notYet: 'Not yet', handIn: 'Submit', erase: 'Erase',
+      back: 'Back', leaveT: 'Leave the game?', leaveX: 'Your progress is saved. You’ll find the other Keismey Studio games on the hub.', toHub: 'Go to the hub', start: 'Begin', close: 'Close', notYet: 'Not yet', handIn: 'Submit', erase: 'Erase',
       region: 'Region {n}', stars: '{n} star(s)', best: 'Best: {s}%', locked: 'Locked', soon: 'Soon',
       soonText: 'Regions 3 to 8 arrive in the next version.',
       kingHint: 'The king adds', kingWord: 'The king', atlasText: 'The regions you have charted for the king.',

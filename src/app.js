@@ -1741,6 +1741,7 @@
   function boot() {
     var app = $('#app');
     ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
+    try { var ql = new URLSearchParams(location.search).get('lang'); if (ql === 'fr' || ql === 'en') save.settings.lang = ql; } catch (e) {}
     if (!save.settings.lang) save.settings.lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
     var atlasT = null;
     Art.onload = function () { draw(); clearTimeout(atlasT); atlasT = setTimeout(function () { thumbCache = {}; freeThumbs = {}; if (S.screen === 'atlas') renderAtlas(); else if (S.screen === 'free') buildFreeList(); }, 250); };
@@ -1752,6 +1753,23 @@
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
+
+    /* Bouton retour du téléphone (hub Keismey Studio, voir ks-back.js) */
+    function onBack() {
+      if ($('#modal').classList.contains('on')) { closeModal(); return null; }
+      if (S.screen === 'game') { if (S.free) leaveFree(); else { persistProgress(); go('atlas'); } return null; }
+      if (S.screen === 'briefing' || S.screen === 'free') { go('atlas'); return null; }
+      if (S.screen === 'atlas') { buildTitle(); go('title'); return null; }
+      modal([
+        h('h2', { text: t('leaveT') }), h('p', { class: 'hint', text: t('leaveX') }),
+        h('div', { class: 'btnrow' }, [
+          h('button', { class: 'btn', text: t('cancel'), onclick: closeModal }),
+          h('button', { class: 'btn primary', text: t('toHub'), onclick: function () { closeModal(); if (window.KSBack) window.KSBack.toHub(); } })
+        ])
+      ]);
+      return null;
+    }
+    if (window.KSBack) window.KSBack.init({ back: onBack, lang: function () { return save.settings.lang === 'en' ? 'en' : 'fr'; } });
     window.__cart = { openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
