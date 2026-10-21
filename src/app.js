@@ -1390,7 +1390,7 @@
 
     /* tampons */
     var Q = [], Rr = clamp(sc * 5.2, 14, 25) * (o.u || 1);
-    if (o.thumb) Rr = clamp(sc * 5.4, 6, 14);
+    if (o.thumb) Rr = Math.max(6, sc * ((o.u || 1) > 1 ? 7 : 5.4));
     if (R) {
       R.sc.items.forEach(function (it) {
         if (it.kind !== 'place') return;
