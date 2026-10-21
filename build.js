@@ -16,10 +16,11 @@ var body = '<div id="app"></div><div id="modal"></div><div id="toast" role="stat
 var title = 'Le Cartographe';
 
 var swReg = '<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>';
+var cfBeacon = "<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"cdb82226cd1b401d9e4f4e899f9b8425\"}'></script><!-- End Cloudflare Web Analytics -->";
 var full = '<!doctype html>\n<html lang="fr"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">' +
   '<meta name="theme-color" content="#15242c"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Le Cartographe"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>' + title + '</title>' + fonts +
-  '<style>' + css + '</style></head><body>' + body + '<script>' + S('ks-back.js') + '</script><script>' + js + '</script>' + swReg + '</body></html>\n';
+  '<style>' + css + '</style></head><body>' + body + '<script>' + S('ks-back.js') + '</script><script>' + js + '</script>' + swReg + cfBeacon + '</body></html>\n';
 
 /* Fragment pour l'outil Artifact : pas de doctype/html/head/body, titre + méta en tête */
 var frag = '<title>' + title + '</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n' + fonts + '\n<style>' + css + '</style>\n' + body + '\n<script>' + js + '</script>\n';
