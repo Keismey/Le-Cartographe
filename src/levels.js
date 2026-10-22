@@ -732,7 +732,33 @@
     }
   ];
 
-  var Levels = { list: LEVELS };
+  /* ───────────── L'atelier d'Orlan : exercice guidé (hors liste des contrées) ───────────── */
+  var TUTO = {
+    id: 0, tuto: true, scene: 'moulins',
+    title: T('L’Atelier d’Orlan', 'Orlan’s Workshop'),
+    scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 0, scout: 0 },
+    king: T('Un exercice laissé par Orlan : deux lieux, une rivière.', 'An exercise left by Orlan: two places, one river.'),
+    hint: T('Le Ruisseau coule d’ouest en est, en passant par le moulin et la ferme.', 'The Brook flows from west to east, past the mill and the farm.'),
+    terrain: [
+      { k: 'forest', c: [18, 22], r: [14, 9], rot: 8 }, { k: 'field', c: [76, 74], r: [13, 8], rot: -12 }, { k: 'mountain', c: [90, 14], r: [14, 9], rot: 10 }
+    ],
+    places: [
+      { id: 'moulin', type: 'moulin', name: T('Moulin du Gué', 'Ford Mill'), truth: [28, 56] },
+      { id: 'ferme',  type: 'ferme',  name: T('Ferme des Trois Chênes', 'Three Oaks Farm'), truth: [68, 56] }
+    ],
+    paths: [
+      { id: 'riviere', type: 'river', name: T('Le Ruisseau', 'The Brook'), truth: [[6, 66], [28, 56], [48, 49], [68, 56], [94, 46]] }
+    ],
+    witnesses: [
+      Wt('odo', '👨‍🌾', 'Maître Odo', 'Master Odo', 'Meunier', 'Miller', 'Un guide sûr pour un premier exercice.', 'A safe guide for a first exercise.', [
+        S('rel', { a: 'ferme', b: 'moulin', cap: 'E', j: 2 }, 'La Ferme des Trois Chênes est à l’est du Moulin, à deux journées.', 'Three Oaks Farm is east of the Mill, two days away.'),
+        S('cross', { a: ['moulin', 'ferme'], path: 'riviere' }, 'Le Ruisseau passe par le Moulin et par la Ferme.', 'The Brook runs past the Mill and the Farm.')
+      ])
+    ],
+    scouts: []
+  };
+
+  var Levels = { list: LEVELS, tuto: TUTO };
   if (typeof module !== 'undefined' && module.exports) module.exports = Levels;
   else root.Levels = Levels;
 })(typeof window !== 'undefined' ? window : globalThis);

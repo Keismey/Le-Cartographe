@@ -550,6 +550,20 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
 .notes summary { cursor: pointer; font-family: var(--font-display); color: #3a2c1c; }
 .notes ul { margin: 6px 0 0; padding-left: 20px; }
 .notes li { margin-bottom: 4px; font-family: var(--font-display); color: #3a2c1c; }
+
+/* ---------- tutoriel guidé : éclairage de la cible + bulle ---------- */
+#tutlayer { position: absolute; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+#tuthole { position: absolute; display: none; border-radius: 12px; border: 2px solid #e6c36a; box-shadow: 0 0 0 100vmax rgba(6,12,16,.46); transition: left .25s, top .25s, width .25s, height .25s; animation: tutpulse 1.4s ease-in-out infinite; }
+#tuthole.soft { box-shadow: none; border-style: dashed; border-radius: 4px; }
+@keyframes tutpulse { 0%, 100% { border-color: #e6c36a; } 50% { border-color: #fff3c8; } }
+#tutbub { position: absolute; left: 12px; right: 12px; display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: linear-gradient(180deg, #f1e7c9, #e3d3a4); color: var(--paper-ink); border: 1px solid #8a6a2a; box-shadow: 0 6px 18px rgba(0,0,0,.5); font-family: var(--font-display); pointer-events: none; }
+#tutbub .t { flex: 1; min-width: 0; font-size: 1.04em; line-height: 1.3; }
+#tutbub .t small { display: block; color: #7a6342; font-family: var(--font-sc); font-size: .74em; letter-spacing: .08em; text-transform: uppercase; }
+#tutbub .tb { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+#tutbub button { pointer-events: auto; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #b09a6a; background: linear-gradient(180deg, #fbf3da, #e8d9ac); color: var(--paper-ink); font-weight: 700; cursor: pointer; font-family: inherit; }
+#tutbub button.go { background: linear-gradient(180deg, #d9573f, #b23a28); color: #fff; border-color: #7e2417; }
+#tutbub button.skip { background: none; border-color: transparent; text-decoration: underline; font-weight: 400; min-height: 36px; }
+#tutbub .portrait, #tutbub img { flex: none; }
 </style></head><body><div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div><script>/* Keismey Studio — outils communs aux jeux du hub (même fichier dans chaque jeu).
 
    KS.support()                      ouvre la page de soutien (Ko-fi) dans un nouvel onglet
@@ -1803,7 +1817,33 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     }
   ];
 
-  var Levels = { list: LEVELS };
+  /* ───────────── L'atelier d'Orlan : exercice guidé (hors liste des contrées) ───────────── */
+  var TUTO = {
+    id: 0, tuto: true, scene: 'moulins',
+    title: T('L’Atelier d’Orlan', 'Orlan’s Workshop'),
+    scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 0, scout: 0 },
+    king: T('Un exercice laissé par Orlan : deux lieux, une rivière.', 'An exercise left by Orlan: two places, one river.'),
+    hint: T('Le Ruisseau coule d’ouest en est, en passant par le moulin et la ferme.', 'The Brook flows from west to east, past the mill and the farm.'),
+    terrain: [
+      { k: 'forest', c: [18, 22], r: [14, 9], rot: 8 }, { k: 'field', c: [76, 74], r: [13, 8], rot: -12 }, { k: 'mountain', c: [90, 14], r: [14, 9], rot: 10 }
+    ],
+    places: [
+      { id: 'moulin', type: 'moulin', name: T('Moulin du Gué', 'Ford Mill'), truth: [28, 56] },
+      { id: 'ferme',  type: 'ferme',  name: T('Ferme des Trois Chênes', 'Three Oaks Farm'), truth: [68, 56] }
+    ],
+    paths: [
+      { id: 'riviere', type: 'river', name: T('Le Ruisseau', 'The Brook'), truth: [[6, 66], [28, 56], [48, 49], [68, 56], [94, 46]] }
+    ],
+    witnesses: [
+      Wt('odo', '👨‍🌾', 'Maître Odo', 'Master Odo', 'Meunier', 'Miller', 'Un guide sûr pour un premier exercice.', 'A safe guide for a first exercise.', [
+        S('rel', { a: 'ferme', b: 'moulin', cap: 'E', j: 2 }, 'La Ferme des Trois Chênes est à l’est du Moulin, à deux journées.', 'Three Oaks Farm is east of the Mill, two days away.'),
+        S('cross', { a: ['moulin', 'ferme'], path: 'riviere' }, 'Le Ruisseau passe par le Moulin et par la Ferme.', 'The Brook runs past the Mill and the Farm.')
+      ])
+    ],
+    scouts: []
+  };
+
+  var Levels = { list: LEVELS, tuto: TUTO };
   if (typeof module !== 'undefined' && module.exports) module.exports = Levels;
   else root.Levels = Levels;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1816,7 +1856,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessinez le monde, un témoignage à la fois.',
-      version: 'V1.0',
+      version: 'V1.1',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -1884,6 +1924,21 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
       about: 'Zéro pub, zéro achat. Fait par Keismey Studio.',
 
       tutStep: 'Tutoriel {i}/{n}', tutNext: 'Suivant', tutSkip: 'Passer', tutDone: 'Compris',
+      tutA1: 'Orlan vous a laissé un exercice. Ouvrez le Carnet : c’est là que vivent les témoignages.',
+      tutA2: 'Touchez Maître Odo pour lire ce qu’il raconte.',
+      tutA3: 'Chaque phrase est un indice. Touchez la première : elle s’épingle au-dessus de la carte et y reste.',
+      tutA4: 'Passez aux Outils : c’est là que se trouvent les lieux à placer.',
+      tutA5: 'Glissez le Moulin sur le parchemin, et lâchez-le où vous voulez.',
+      tutA6: 'La ferme est à l’est du moulin, à deux journées. Glissez-la à peu près au bon endroit.',
+      tutA7: 'La loupe est allumée : elle dessine sur la carte la zone décrite par l’indice épinglé. Votre ferme devrait s’y trouver.',
+      tutA8: 'Pour vérifier une distance, prenez la Règle, puis glissez d’un lieu à l’autre : elle compte les journées.',
+      tutA9: 'Reste la rivière. Touchez Tracer pour dessiner dessus.',
+      tutA10: 'Dessinez du doigt un trait qui passe par le moulin et par la ferme.',
+      tutA11: 'Quand la carte vous convient, remettez-la.',
+      tutEndT: 'Exercice remis !', tutGo: 'Commencer la première contrée', tutBack: 'Retour',
+      tutEndOk: 'Les deux témoignages concordent avec votre carte. Vous tenez le principe : placer, mesurer, tracer, remettre.',
+      tutEndKo: 'Votre carte n’est pas tout à fait juste, mais le principe y est. Dans les vraies contrées, il faudra recouper plusieurs témoins.',
+      tutBtn: 'Revoir le tutoriel',
       tut1: 'Touchez Odo dans le Carnet.',
       tut2: 'Chaque phrase devient un indice dans le carnet.',
       tut3: 'Ouvrez Outils, puis glissez le Moulin Haut sur le parchemin.',
@@ -1914,7 +1969,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'V1.0',
+      version: 'V1.1',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
@@ -1982,6 +2037,21 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
       about: 'No ads, no purchases. Made by Keismey Studio.',
 
       tutStep: 'Tutorial {i}/{n}', tutNext: 'Next', tutSkip: 'Skip', tutDone: 'Got it',
+      tutA1: 'Orlan left you an exercise. Open the Notebook: that is where the testimonies live.',
+      tutA2: 'Tap Master Odo to read what he says.',
+      tutA3: 'Every sentence is a clue. Tap the first one: it is pinned above the map and stays there.',
+      tutA4: 'Switch to Tools: that is where the places to put down are.',
+      tutA5: 'Drag the Mill onto the parchment and drop it anywhere you like.',
+      tutA6: 'The farm is east of the mill, two days away. Drag it roughly to the right spot.',
+      tutA7: 'The magnifier is on: it draws on the map the area the pinned clue describes. Your farm should lie in it.',
+      tutA8: 'To check a distance, pick the Ruler, then drag from one place to another: it counts the days.',
+      tutA9: 'The river is left. Tap Draw to sketch it.',
+      tutA10: 'Draw a line with your finger that runs past the mill and the farm.',
+      tutA11: 'When the map looks right, hand it in.',
+      tutEndT: 'Exercise handed in!', tutGo: 'Start the first region', tutBack: 'Back',
+      tutEndOk: 'Both testimonies agree with your map. You have the principle: place, measure, draw, hand in.',
+      tutEndKo: 'Your map is not quite right, but you have the principle. In the real regions, you will need to cross-check several witnesses.',
+      tutBtn: 'Replay the tutorial',
       tut1: 'Tap Odo in the Notebook.',
       tut2: 'Every sentence becomes a clue in the notebook.',
       tut3: 'Open Tools, then drag the Upper Mill onto the parchment.',
@@ -2523,7 +2593,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   var S = {
     screen: 'title', levelIdx: 0, level: null, phase: 'play',
     placed: {}, drawn: {}, asked: {}, scoutsUsed: 0, suspects: {}, pins: {},
-    mode: 'move', activePath: null, ghost: false, panel: 'tools', openCard: null,
+    mode: 'move', activePath: null, ghost: true, panel: 'tools', openCard: null,
     selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false,
     free: null, resultView: 'diff', brush: null, brushKey: '', brushSize: 6, freePath: null, tf: 'all'
   };
@@ -2602,7 +2672,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     if (s === 'title') return mpick(['titre']);
     if (s === 'atlas' || s === 'briefing') return mpick(['atlas', 'titre']);
     if (s === 'free') return mpick(['libre', 'atlas', 'titre']);
-    if (s === 'game' && S.level) return S.free ? mpick(['libre']) : mpick(['c' + S.level.id]);
+    if (s === 'game' && S.level) return S.free ? mpick(['libre']) : (S.level.tuto ? mpick(['atlas', 'titre']) : mpick(['c' + S.level.id]));
     return null;
   }
   function mtrack(name) {
@@ -2676,8 +2746,11 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.0';
+  var VERSION = '1.1';
   var PATCH_NOTES = [
+    { v: '1.1', d: ['22 octobre 2026', '22 October 2026'],
+      fr: ['Nouveau : un tutoriel guidé, « L’Atelier d’Orlan » : une mini-contrée où chaque geste est éclairé à l’écran. Il se relance depuis les Options.', 'Le bouton Indices est maintenant activé par défaut.'],
+      en: ['New: a guided tutorial, “Orlan’s Workshop”: a mini region where each gesture is highlighted on screen. You can replay it from Options.', 'The Clues button is now on by default.'] },
     { v: '1.0', d: ['21 octobre 2026', '21 October 2026'],
       fr: ['Première version : huit contrées à relever pour le roi, deux fins, un mode libre avec tous les crayons, la musique et les bruitages.', 'Nouveau : bouton retour du téléphone, menu Options commun aux jeux du hub, sauvegarde à exporter ou importer, application installable.'],
       en: ['First release: eight regions to chart for the king, two endings, a free mode with every pencil, music and sound effects.', 'New: phone back button, the Options menu shared with the hub games, save export and import, installable app.'] }
@@ -2726,7 +2799,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     el.querySelector('.wm-orn').innerHTML = '<svg viewBox="0 0 240 20"><path d="M4 10 H98 M142 10 H236" stroke="#d2a94b" stroke-width="1.2" stroke-linecap="round"/><path d="M120 2 L128 10 L120 18 L112 10Z" fill="#d2a94b"/><circle cx="104" cy="10" r="2" fill="#d2a94b"/><circle cx="136" cy="10" r="2" fill="#d2a94b"/></svg>';
     el.appendChild(h('p', { class: 'tag', text: t('tagline') }));
     el.appendChild(h('div', { class: 'stack' }, [
-      h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) openBriefing(0); else go('atlas'); } }),
+      h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) { if (!save.tutDone && window.Levels.tuto) startTuto(); else openBriefing(0); } else go('atlas'); } }),
       h('button', { class: 'btn', text: t('atlas'), onclick: function () { go('atlas'); } }),
       h('button', { class: 'btn ghost', text: t('settings'), onclick: openSettings })
     ]));
@@ -2891,15 +2964,14 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     S.placed = ip ? ip.placed || {} : {}; S.drawn = ip ? ip.drawn || {} : {};
     S.asked = ip ? ip.asked || {} : {}; S.scoutsUsed = ip ? ip.scoutsUsed || 0 : 0;
     S.suspects = ip ? ip.suspects || {} : {}; S.pins = ip ? ip.pins || {} : {};
-    S.mode = 'move'; S.activePath = null; S.ghost = false; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
     S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null; S.tf = 'all';
-    if (L.id === 1 && !save.tutDone && !ip) { S.tut = { step: 1 }; S.panel = 'notebook'; }
     save.started = true; persist();
     go('game'); renderAll();
   }
   function persistProgress() {
     if (S.free) { S.free.cur.t = Date.now(); persist(); return; }
-    if (S.phase !== 'play' || !S.level) return;
+    if (S.phase !== 'play' || !S.level || S.level.tuto) return;
     save.inprogress[S.level.id] = { placed: S.placed, drawn: S.drawn, asked: S.asked, scoutsUsed: S.scoutsUsed, suspects: S.suspects, pins: S.pins, t: Date.now() };
     persist();
   }
@@ -2952,7 +3024,6 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
       h('button', { class: 'iconbtn kingbtn', id: 'btn-king', 'aria-label': t('kingWord'), onclick: openKing }, [portraitKey('roi', 'xs') || h('span', { text: '👑' })]),
       h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
     ]));
-    g.appendChild(h('div', { id: 'tut', class: 'gutter' }));
     var wrap = h('div', { id: 'mapwrap' }, [
       h('div', { id: 'rail' }),
       h('div', { id: 'mapcol' }, [
@@ -3058,8 +3129,8 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   }
   function renderTop() {
     if (!S.level) return;
-    var kb = $('#btn-king'); if (kb) kb.style.display = S.free ? 'none' : '';
-    $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : S.level.id + ' · ' + loc(S.level.title);
+    var kb = $('#btn-king'); if (kb) kb.style.display = (S.free || S.level.tuto) ? 'none' : '';
+    $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : (S.level.tuto ? loc(S.level.title) : S.level.id + ' · ' + loc(S.level.title));
   }
   function renderBar() {
     var b = $('#bar'); clear(b);
@@ -3111,6 +3182,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     else if (S.panel === 'notebook') renderNotebook(p);
     else renderTools(p);
     p.scrollTop = st;
+    tutCheck();
   }
   function chipImage(type) {
     var s = Art.src('stamps.' + type); if (s) return h('img', { src: s, alt: '', draggable: 'false' });
@@ -3270,36 +3342,84 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     persistProgress(); draw(); renderPanel(); tutCheck();
   }
 
-  /* ───────────── tutoriel ───────────── */
-  var TUT_N = 6;
-  function tutDone(step) {
-    if (!S.tut) return false;
-    switch (step) {
-      case 1: return S.openCard === 'odo';
-      case 2: return !!S.placed.moulin_haut;
-      case 3: return !!S.placed.moulin_haut;
-      case 4: return S.rulerUsed;
-      case 5: return Object.keys(S.asked).length > 0;
-      default: return false;
-    }
+  /* ───────────── tutoriel guidé : L'Atelier d'Orlan ───────────── */
+  /* Une mini-contrée (deux lieux, une rivière, un témoin). Chaque étape éclaire l'élément à toucher ;
+     elle avance toute seule quand le joueur a fait le geste. */
+  var TUT_STEPS = [
+    { target: '#btn-notebook', done: function () { return S.panel === 'notebook'; } },
+    { target: '.card[data-w="odo"] .card-h', done: function () { return S.openCard === 'odo'; } },
+    { target: '.stmt', done: function () { return Object.keys(S.pins).length > 0; } },
+    { target: '#btn-tools', done: function () { return S.panel === 'tools'; } },
+    { target: '.chip[data-id="moulin"]', done: function () { return !!S.placed.moulin; } },
+    { target: '.chip[data-id="ferme"]', done: function () { return !!S.placed.ferme; } },
+    { target: '#r-ghost', info: true },
+    { target: '#r-ruler', done: function () { return S.rulerUsed; } },
+    { target: '#r-draw', done: function () { return S.mode === 'draw' || (S.drawn.riviere && S.drawn.riviere.length >= 2); } },
+    { target: '#mapcol', soft: true, done: function () { return !!(S.drawn.riviere && S.drawn.riviere.length >= 2); } },
+    { target: '#btn-submit', done: function () { return false; } }
+  ];
+  var TUT_N = TUT_STEPS.length, tutTimer = null, tutShown = -1;
+  function startTuto() {
+    var L = window.Levels.tuto; if (!L) return;
+    try { persistProgress(); } catch (e) {}
+    S.free = null; S.brush = null; S.brushKey = ''; S.levelIdx = -1; S.level = L; S.phase = 'play'; S.result = null; S.detailOpen = false; S.resultView = 'diff';
+    S.placed = {}; S.drawn = {}; S.asked = {}; S.scoutsUsed = 0; S.suspects = {}; S.pins = {};
+    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.undo = []; S.ruler = null; S.rulerUsed = false; lastPanelKey = null; S.tf = 'all';
+    S.tut = { step: 0 }; tutShown = -1;
+    closeModal(); go('game'); renderAll();
   }
   function tutCheck() {
     if (!S.tut || S.phase !== 'play') return;
     var moved = false;
-    while (S.tut && S.tut.step < TUT_N && tutDone(S.tut.step)) { S.tut.step++; moved = true; }
+    while (S.tut.step < TUT_N - 1 && TUT_STEPS[S.tut.step].done && TUT_STEPS[S.tut.step].done()) { S.tut.step++; moved = true; }
     if (moved) sfx('pick');
     renderTut();
   }
-  function tutEnd() { S.tut = null; save.tutDone = true; persist(); renderTut(); }
+  function tutEnd(toStory) {
+    S.tut = null; save.tutDone = true; persist(); renderTut();
+    if (toStory === false) return;
+    S.level = null; closeModal();
+    if (Object.keys(save.progress).length) { buildTitle(); go('atlas'); } else openBriefing(0);
+  }
+  function tutFinish() {
+    var L = S.level, good = true;
+    entries().forEach(function (e) { if (evalEntry(e).status !== 'ok') good = false; });
+    sfx(good ? 'chime' : 'pick');
+    modal([
+      h('div', { class: 'kingmodal' }, [portraitKey('orlan', 'md'), h('div', {}, [h('small', { text: loc(L.title) }), h('h2', { text: t('tutEndT') })])]),
+      h('p', { text: good ? t('tutEndOk') : t('tutEndKo') }),
+      h('button', { class: 'btn primary', id: 'btn-tut-go', text: Object.keys(save.progress).length ? t('tutBack') : t('tutGo'), onclick: function () { tutEnd(); } })
+    ]);
+  }
+  function tutPlace() {
+    var layer = $('#tutlayer'); if (!layer || !S.tut) return;
+    var st = TUT_STEPS[S.tut.step], tg = st && $(st.target), hole = $('#tuthole'), bub = $('#tutbub');
+    var gr = $('#game').getBoundingClientRect();
+    if (!tg || !tg.getBoundingClientRect().width) { hole.style.display = 'none'; bub.style.top = '64px'; bub.style.bottom = 'auto'; return; }
+    if (tutShown !== S.tut.step) { tutShown = S.tut.step; try { if ($('#panel').contains(tg)) tg.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+    var r = tg.getBoundingClientRect(), pad = st.soft ? 0 : 5;
+    hole.style.display = 'block'; hole.classList.toggle('soft', !!st.soft);
+    hole.style.left = (r.left - gr.left - pad) + 'px'; hole.style.top = (r.top - gr.top - pad) + 'px';
+    hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
+    /* la bulle va du côté opposé à la cible, pour ne jamais la cacher */
+    var mid = (r.top + r.bottom) / 2 - gr.top, low = mid > gr.height * .5;
+    if (low) { bub.style.top = '58px'; bub.style.bottom = 'auto'; } else { bub.style.bottom = '70px'; bub.style.top = 'auto'; }
+  }
   function renderTut() {
-    var el = $('#tut'); if (!el) return; clear(el);
-    if (!S.tut || S.phase !== 'play') { el.classList.remove('on'); return; }
-    var step = S.tut.step, last = step >= TUT_N;
-    el.classList.add('on');
-    var op = portraitKey('orlan', 'tut'); if (op) el.appendChild(op);
-    el.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step, n: TUT_N }) }), t('tut' + step)]));
-    el.appendChild(h('button', { class: 'skip', text: t('tutSkip'), onclick: tutEnd }));
-    el.appendChild(h('button', { id: 'tut-next', text: last ? t('tutDone') : t('tutNext'), onclick: function () { if (last) tutEnd(); else { S.tut.step++; renderTut(); } } }));
+    var g = $('#game'); if (!g) return;
+    var layer = $('#tutlayer');
+    if (!S.tut || S.phase !== 'play' || S.screen !== 'game') { if (layer) layer.remove(); clearInterval(tutTimer); tutTimer = null; return; }
+    if (!layer) { layer = h('div', { id: 'tutlayer' }, [h('div', { id: 'tuthole' }), h('div', { id: 'tutbub' })]); g.appendChild(layer); }
+    var step = S.tut.step, st = TUT_STEPS[step], last = step >= TUT_N - 1, bub = $('#tutbub'); clear(bub);
+    var op = portraitKey('orlan', 'tut'); if (op) bub.appendChild(op);
+    bub.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step + 1, n: TUT_N }) }), t('tutA' + (step + 1))]));
+    var btns = h('div', { class: 'tb' });
+    if (st.info) btns.appendChild(h('button', { id: 'tut-next', class: 'go', text: t('tutNext'), onclick: function () { S.tut.step++; sfx('pick'); renderTut(); } }));
+    btns.appendChild(h('button', { class: 'skip', id: 'tut-skip', text: t('tutSkip'), onclick: function () { tutEnd(); } }));
+    bub.appendChild(btns);
+    if (!tutTimer) tutTimer = setInterval(function () { if (!S.tut || S.screen !== 'game') { renderTut(); return; } tutPlace(); }, 250);
+    tutPlace();
   }
 
   /* ───────────── remise & résultat ───────────── */
@@ -3311,6 +3431,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   }
   function askSubmit() {
     if (S.phase !== 'play') return;
+    if (S.level && S.level.tuto) { tutFinish(); return; }
     var miss = missingCount();
     modal([
       h('h2', { text: t('confirm') }),
@@ -3557,6 +3678,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'optstack' }, [
         h('button', { class: 'btn', id: 'btn-notes', text: t('notesBtn'), onclick: openNotes }),
+        h('button', { class: 'btn', id: 'btn-tuto', text: t('tutBtn'), onclick: startTuto }),
         h('button', { class: 'btn', id: 'btn-saveio', text: window.KS ? t('saveIo') : t('exportSave') + ' / ' + t('importSave'), onclick: function () {
           if (window.KS) { closeModal(); persistNow(); window.KS.saveDialog({ lang: I.lang, keys: [KEY, KEY + '.bak'], save: persistNow, file: 'le-cartographe', accent: '#d6b25a' }); } else openSaveIO(); } }),
         window.KS ? h('button', { class: 'btn', id: 'btn-bug', text: t('bugBtn'), onclick: function () { persistNow(); window.KS.bug('Le Cartographe', I.lang); } }) : null,
@@ -4245,7 +4367,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
       return null;
     }
     if (window.KSBack) window.KSBack.init({ back: onBack, lang: function () { return save.settings.lang === 'en' ? 'en' : 'fr'; } });
-    window.__cart = { openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    window.__cart = { startTuto: startTuto, tutCheck: tutCheck, openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

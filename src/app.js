@@ -77,7 +77,7 @@
   var S = {
     screen: 'title', levelIdx: 0, level: null, phase: 'play',
     placed: {}, drawn: {}, asked: {}, scoutsUsed: 0, suspects: {}, pins: {},
-    mode: 'move', activePath: null, ghost: false, panel: 'tools', openCard: null,
+    mode: 'move', activePath: null, ghost: true, panel: 'tools', openCard: null,
     selected: null, armed: null, undo: [], ruler: null, rulerUsed: false, tut: null, result: null, detailOpen: false,
     free: null, resultView: 'diff', brush: null, brushKey: '', brushSize: 6, freePath: null, tf: 'all'
   };
@@ -156,7 +156,7 @@
     if (s === 'title') return mpick(['titre']);
     if (s === 'atlas' || s === 'briefing') return mpick(['atlas', 'titre']);
     if (s === 'free') return mpick(['libre', 'atlas', 'titre']);
-    if (s === 'game' && S.level) return S.free ? mpick(['libre']) : mpick(['c' + S.level.id]);
+    if (s === 'game' && S.level) return S.free ? mpick(['libre']) : (S.level.tuto ? mpick(['atlas', 'titre']) : mpick(['c' + S.level.id]));
     return null;
   }
   function mtrack(name) {
@@ -230,8 +230,11 @@
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.0';
+  var VERSION = '1.1';
   var PATCH_NOTES = [
+    { v: '1.1', d: ['22 octobre 2026', '22 October 2026'],
+      fr: ['Nouveau : un tutoriel guidé, « L’Atelier d’Orlan » : une mini-contrée où chaque geste est éclairé à l’écran. Il se relance depuis les Options.', 'Le bouton Indices est maintenant activé par défaut.'],
+      en: ['New: a guided tutorial, “Orlan’s Workshop”: a mini region where each gesture is highlighted on screen. You can replay it from Options.', 'The Clues button is now on by default.'] },
     { v: '1.0', d: ['21 octobre 2026', '21 October 2026'],
       fr: ['Première version : huit contrées à relever pour le roi, deux fins, un mode libre avec tous les crayons, la musique et les bruitages.', 'Nouveau : bouton retour du téléphone, menu Options commun aux jeux du hub, sauvegarde à exporter ou importer, application installable.'],
       en: ['First release: eight regions to chart for the king, two endings, a free mode with every pencil, music and sound effects.', 'New: phone back button, the Options menu shared with the hub games, save export and import, installable app.'] }
@@ -280,7 +283,7 @@
     el.querySelector('.wm-orn').innerHTML = '<svg viewBox="0 0 240 20"><path d="M4 10 H98 M142 10 H236" stroke="#d2a94b" stroke-width="1.2" stroke-linecap="round"/><path d="M120 2 L128 10 L120 18 L112 10Z" fill="#d2a94b"/><circle cx="104" cy="10" r="2" fill="#d2a94b"/><circle cx="136" cy="10" r="2" fill="#d2a94b"/></svg>';
     el.appendChild(h('p', { class: 'tag', text: t('tagline') }));
     el.appendChild(h('div', { class: 'stack' }, [
-      h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) openBriefing(0); else go('atlas'); } }),
+      h('button', { class: 'btn primary', id: 'btn-play', text: has ? t('continue_') : t('play'), onclick: function () { audio(); if (!has) { if (!save.tutDone && window.Levels.tuto) startTuto(); else openBriefing(0); } else go('atlas'); } }),
       h('button', { class: 'btn', text: t('atlas'), onclick: function () { go('atlas'); } }),
       h('button', { class: 'btn ghost', text: t('settings'), onclick: openSettings })
     ]));
@@ -445,15 +448,14 @@
     S.placed = ip ? ip.placed || {} : {}; S.drawn = ip ? ip.drawn || {} : {};
     S.asked = ip ? ip.asked || {} : {}; S.scoutsUsed = ip ? ip.scoutsUsed || 0 : 0;
     S.suspects = ip ? ip.suspects || {} : {}; S.pins = ip ? ip.pins || {} : {};
-    S.mode = 'move'; S.activePath = null; S.ghost = false; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
     S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null; S.tf = 'all';
-    if (L.id === 1 && !save.tutDone && !ip) { S.tut = { step: 1 }; S.panel = 'notebook'; }
     save.started = true; persist();
     go('game'); renderAll();
   }
   function persistProgress() {
     if (S.free) { S.free.cur.t = Date.now(); persist(); return; }
-    if (S.phase !== 'play' || !S.level) return;
+    if (S.phase !== 'play' || !S.level || S.level.tuto) return;
     save.inprogress[S.level.id] = { placed: S.placed, drawn: S.drawn, asked: S.asked, scoutsUsed: S.scoutsUsed, suspects: S.suspects, pins: S.pins, t: Date.now() };
     persist();
   }
@@ -506,7 +508,6 @@
       h('button', { class: 'iconbtn kingbtn', id: 'btn-king', 'aria-label': t('kingWord'), onclick: openKing }, [portraitKey('roi', 'xs') || h('span', { text: '👑' })]),
       h('button', { class: 'iconbtn', 'aria-label': t('settings'), onclick: openSettings }, [uiIcon('engrenage')])
     ]));
-    g.appendChild(h('div', { id: 'tut', class: 'gutter' }));
     var wrap = h('div', { id: 'mapwrap' }, [
       h('div', { id: 'rail' }),
       h('div', { id: 'mapcol' }, [
@@ -612,8 +613,8 @@
   }
   function renderTop() {
     if (!S.level) return;
-    var kb = $('#btn-king'); if (kb) kb.style.display = S.free ? 'none' : '';
-    $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : S.level.id + ' · ' + loc(S.level.title);
+    var kb = $('#btn-king'); if (kb) kb.style.display = (S.free || S.level.tuto) ? 'none' : '';
+    $('#g-title').textContent = S.free ? freeTitle(S.free.cur) : (S.level.tuto ? loc(S.level.title) : S.level.id + ' · ' + loc(S.level.title));
   }
   function renderBar() {
     var b = $('#bar'); clear(b);
@@ -665,6 +666,7 @@
     else if (S.panel === 'notebook') renderNotebook(p);
     else renderTools(p);
     p.scrollTop = st;
+    tutCheck();
   }
   function chipImage(type) {
     var s = Art.src('stamps.' + type); if (s) return h('img', { src: s, alt: '', draggable: 'false' });
@@ -824,36 +826,84 @@
     persistProgress(); draw(); renderPanel(); tutCheck();
   }
 
-  /* ───────────── tutoriel ───────────── */
-  var TUT_N = 6;
-  function tutDone(step) {
-    if (!S.tut) return false;
-    switch (step) {
-      case 1: return S.openCard === 'odo';
-      case 2: return !!S.placed.moulin_haut;
-      case 3: return !!S.placed.moulin_haut;
-      case 4: return S.rulerUsed;
-      case 5: return Object.keys(S.asked).length > 0;
-      default: return false;
-    }
+  /* ───────────── tutoriel guidé : L'Atelier d'Orlan ───────────── */
+  /* Une mini-contrée (deux lieux, une rivière, un témoin). Chaque étape éclaire l'élément à toucher ;
+     elle avance toute seule quand le joueur a fait le geste. */
+  var TUT_STEPS = [
+    { target: '#btn-notebook', done: function () { return S.panel === 'notebook'; } },
+    { target: '.card[data-w="odo"] .card-h', done: function () { return S.openCard === 'odo'; } },
+    { target: '.stmt', done: function () { return Object.keys(S.pins).length > 0; } },
+    { target: '#btn-tools', done: function () { return S.panel === 'tools'; } },
+    { target: '.chip[data-id="moulin"]', done: function () { return !!S.placed.moulin; } },
+    { target: '.chip[data-id="ferme"]', done: function () { return !!S.placed.ferme; } },
+    { target: '#r-ghost', info: true },
+    { target: '#r-ruler', done: function () { return S.rulerUsed; } },
+    { target: '#r-draw', done: function () { return S.mode === 'draw' || (S.drawn.riviere && S.drawn.riviere.length >= 2); } },
+    { target: '#mapcol', soft: true, done: function () { return !!(S.drawn.riviere && S.drawn.riviere.length >= 2); } },
+    { target: '#btn-submit', done: function () { return false; } }
+  ];
+  var TUT_N = TUT_STEPS.length, tutTimer = null, tutShown = -1;
+  function startTuto() {
+    var L = window.Levels.tuto; if (!L) return;
+    try { persistProgress(); } catch (e) {}
+    S.free = null; S.brush = null; S.brushKey = ''; S.levelIdx = -1; S.level = L; S.phase = 'play'; S.result = null; S.detailOpen = false; S.resultView = 'diff';
+    S.placed = {}; S.drawn = {}; S.asked = {}; S.scoutsUsed = 0; S.suspects = {}; S.pins = {};
+    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.undo = []; S.ruler = null; S.rulerUsed = false; lastPanelKey = null; S.tf = 'all';
+    S.tut = { step: 0 }; tutShown = -1;
+    closeModal(); go('game'); renderAll();
   }
   function tutCheck() {
     if (!S.tut || S.phase !== 'play') return;
     var moved = false;
-    while (S.tut && S.tut.step < TUT_N && tutDone(S.tut.step)) { S.tut.step++; moved = true; }
+    while (S.tut.step < TUT_N - 1 && TUT_STEPS[S.tut.step].done && TUT_STEPS[S.tut.step].done()) { S.tut.step++; moved = true; }
     if (moved) sfx('pick');
     renderTut();
   }
-  function tutEnd() { S.tut = null; save.tutDone = true; persist(); renderTut(); }
+  function tutEnd(toStory) {
+    S.tut = null; save.tutDone = true; persist(); renderTut();
+    if (toStory === false) return;
+    S.level = null; closeModal();
+    if (Object.keys(save.progress).length) { buildTitle(); go('atlas'); } else openBriefing(0);
+  }
+  function tutFinish() {
+    var L = S.level, good = true;
+    entries().forEach(function (e) { if (evalEntry(e).status !== 'ok') good = false; });
+    sfx(good ? 'chime' : 'pick');
+    modal([
+      h('div', { class: 'kingmodal' }, [portraitKey('orlan', 'md'), h('div', {}, [h('small', { text: loc(L.title) }), h('h2', { text: t('tutEndT') })])]),
+      h('p', { text: good ? t('tutEndOk') : t('tutEndKo') }),
+      h('button', { class: 'btn primary', id: 'btn-tut-go', text: Object.keys(save.progress).length ? t('tutBack') : t('tutGo'), onclick: function () { tutEnd(); } })
+    ]);
+  }
+  function tutPlace() {
+    var layer = $('#tutlayer'); if (!layer || !S.tut) return;
+    var st = TUT_STEPS[S.tut.step], tg = st && $(st.target), hole = $('#tuthole'), bub = $('#tutbub');
+    var gr = $('#game').getBoundingClientRect();
+    if (!tg || !tg.getBoundingClientRect().width) { hole.style.display = 'none'; bub.style.top = '64px'; bub.style.bottom = 'auto'; return; }
+    if (tutShown !== S.tut.step) { tutShown = S.tut.step; try { if ($('#panel').contains(tg)) tg.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+    var r = tg.getBoundingClientRect(), pad = st.soft ? 0 : 5;
+    hole.style.display = 'block'; hole.classList.toggle('soft', !!st.soft);
+    hole.style.left = (r.left - gr.left - pad) + 'px'; hole.style.top = (r.top - gr.top - pad) + 'px';
+    hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
+    /* la bulle va du côté opposé à la cible, pour ne jamais la cacher */
+    var mid = (r.top + r.bottom) / 2 - gr.top, low = mid > gr.height * .5;
+    if (low) { bub.style.top = '58px'; bub.style.bottom = 'auto'; } else { bub.style.bottom = '70px'; bub.style.top = 'auto'; }
+  }
   function renderTut() {
-    var el = $('#tut'); if (!el) return; clear(el);
-    if (!S.tut || S.phase !== 'play') { el.classList.remove('on'); return; }
-    var step = S.tut.step, last = step >= TUT_N;
-    el.classList.add('on');
-    var op = portraitKey('orlan', 'tut'); if (op) el.appendChild(op);
-    el.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step, n: TUT_N }) }), t('tut' + step)]));
-    el.appendChild(h('button', { class: 'skip', text: t('tutSkip'), onclick: tutEnd }));
-    el.appendChild(h('button', { id: 'tut-next', text: last ? t('tutDone') : t('tutNext'), onclick: function () { if (last) tutEnd(); else { S.tut.step++; renderTut(); } } }));
+    var g = $('#game'); if (!g) return;
+    var layer = $('#tutlayer');
+    if (!S.tut || S.phase !== 'play' || S.screen !== 'game') { if (layer) layer.remove(); clearInterval(tutTimer); tutTimer = null; return; }
+    if (!layer) { layer = h('div', { id: 'tutlayer' }, [h('div', { id: 'tuthole' }), h('div', { id: 'tutbub' })]); g.appendChild(layer); }
+    var step = S.tut.step, st = TUT_STEPS[step], last = step >= TUT_N - 1, bub = $('#tutbub'); clear(bub);
+    var op = portraitKey('orlan', 'tut'); if (op) bub.appendChild(op);
+    bub.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step + 1, n: TUT_N }) }), t('tutA' + (step + 1))]));
+    var btns = h('div', { class: 'tb' });
+    if (st.info) btns.appendChild(h('button', { id: 'tut-next', class: 'go', text: t('tutNext'), onclick: function () { S.tut.step++; sfx('pick'); renderTut(); } }));
+    btns.appendChild(h('button', { class: 'skip', id: 'tut-skip', text: t('tutSkip'), onclick: function () { tutEnd(); } }));
+    bub.appendChild(btns);
+    if (!tutTimer) tutTimer = setInterval(function () { if (!S.tut || S.screen !== 'game') { renderTut(); return; } tutPlace(); }, 250);
+    tutPlace();
   }
 
   /* ───────────── remise & résultat ───────────── */
@@ -865,6 +915,7 @@
   }
   function askSubmit() {
     if (S.phase !== 'play') return;
+    if (S.level && S.level.tuto) { tutFinish(); return; }
     var miss = missingCount();
     modal([
       h('h2', { text: t('confirm') }),
@@ -1111,6 +1162,7 @@
       h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'optstack' }, [
         h('button', { class: 'btn', id: 'btn-notes', text: t('notesBtn'), onclick: openNotes }),
+        h('button', { class: 'btn', id: 'btn-tuto', text: t('tutBtn'), onclick: startTuto }),
         h('button', { class: 'btn', id: 'btn-saveio', text: window.KS ? t('saveIo') : t('exportSave') + ' / ' + t('importSave'), onclick: function () {
           if (window.KS) { closeModal(); persistNow(); window.KS.saveDialog({ lang: I.lang, keys: [KEY, KEY + '.bak'], save: persistNow, file: 'le-cartographe', accent: '#d6b25a' }); } else openSaveIO(); } }),
         window.KS ? h('button', { class: 'btn', id: 'btn-bug', text: t('bugBtn'), onclick: function () { persistNow(); window.KS.bug('Le Cartographe', I.lang); } }) : null,
@@ -1799,7 +1851,7 @@
       return null;
     }
     if (window.KSBack) window.KSBack.init({ back: onBack, lang: function () { return save.settings.lang === 'en' ? 'en' : 'fr'; } });
-    window.__cart = { openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
+    window.__cart = { startTuto: startTuto, tutCheck: tutCheck, openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
