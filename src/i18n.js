@@ -5,7 +5,7 @@
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessinez le monde, un témoignage à la fois.',
-      version: 'V1.1',
+      version: 'V1.2',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -30,6 +30,7 @@
       ghostOn: 'Indices affichés', ghostOff: 'Indices masqués',
       okMark: 'respecté', koMark: 'brisé', naMark: 'pas encore posé',
 
+      scoutShort: 'Éclaireur', askShort: 'Question', askShort2: 'Poser une question', nbHelpTitle: 'Jetons et règles', nbPick: 'Touchez un portrait pour lire son témoignage.',
       says: 'dit', reply: 'Réponse', alreadyAsked: 'A déjà répondu', noToken: 'Plus de jeton',
       scoutCardTitle: 'Éclaireur', scoutVerified: 'Fait vérifié sur le terrain', scoutNone: 'Aucun fait révélé.',
       scoutEmpty: 'Plus rien à révéler', askBtn: 'Poser une question', scoutBtn: 'Envoyer l’éclaireur',
@@ -118,7 +119,7 @@
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'V1.1',
+      version: 'V1.2',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
@@ -143,6 +144,7 @@
       ghostOn: 'Clues shown', ghostOff: 'Clues hidden',
       okMark: 'respected', koMark: 'broken', naMark: 'not placed yet',
 
+      scoutShort: 'Scout', askShort: 'Question', askShort2: 'Ask a question', nbHelpTitle: 'Tokens and rules', nbPick: 'Tap a portrait to read their testimony.',
       says: 'says', reply: 'Reply', alreadyAsked: 'Already answered', noToken: 'No token left',
       scoutCardTitle: 'Scout', scoutVerified: 'Fact verified on the ground', scoutNone: 'No fact revealed.',
       scoutEmpty: 'Nothing left to reveal', askBtn: 'Ask a question', scoutBtn: 'Send the scout',

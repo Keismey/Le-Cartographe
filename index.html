@@ -564,6 +564,33 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
 #tutbub button.go { background: linear-gradient(180deg, #d9573f, #b23a28); color: #fff; border-color: #7e2417; }
 #tutbub button.skip { background: none; border-color: transparent; text-decoration: underline; font-weight: 400; min-height: 36px; }
 #tutbub .portrait, #tutbub img { flex: none; }
+
+/* ---------- carnet à portraits ---------- */
+.nbhead { position: sticky; top: 0; z-index: 3; margin: -12px -16px 0; padding: 8px 12px 4px; background: var(--night); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.nbhead .tokenbar { flex-wrap: nowrap; gap: 8px; }
+.chipt { display: inline-flex; align-items: center; gap: 4px; min-height: 38px; padding: 0 12px 0 8px; border-radius: 20px; border: 1px solid var(--line); background: var(--night-2); color: var(--text); font-weight: 700; font-size: .9em; cursor: pointer; }
+.chipt.info { cursor: default; }
+.chipt[disabled] { opacity: .45; cursor: default; }
+.chipt b { color: var(--brass); }
+.chipt img.ico { width: 24px; height: 24px; }
+.qbtn { margin-left: auto; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--night-2); color: var(--paper-2); font-family: var(--font-display); font-weight: 700; font-size: 1.15em; cursor: pointer; flex: none; }
+.strip { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; }
+.strip::-webkit-scrollbar { display: none; }
+.pp { flex: none; width: 62px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 2px 0; color: var(--muted); cursor: pointer; }
+.pp .av { position: relative; display: block; width: 50px; height: 50px; }
+.pp .pf.card { width: 50px; height: 50px; margin: 0; }
+.pp .nm { font-family: var(--font-sc); font-size: .74em; letter-spacing: .03em; max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp.sel { color: var(--paper); }
+.pp.sel .pf { filter: drop-shadow(0 0 6px rgba(210,169,75,.85)); }
+.pp:not(.sel) .pf { opacity: .8; }
+.pp .badge { position: absolute; right: -4px; top: -2px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: var(--brass); color: #2a1f08; font-weight: 700; font-size: .72em; line-height: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.5); z-index: 2; }
+.pp .flag { position: absolute; left: -2px; bottom: 0; z-index: 2; }
+.scoutav { background: radial-gradient(circle, #efe3c3 55%, #c9a65a 100%); border-radius: 50%; }
+.scoutav img.ico { position: absolute; inset: 20%; width: 60%; height: 60%; }
+.pad > .who { display: flex; align-items: baseline; gap: 10px; padding-top: 4px; }
+.pad > .who b { font-family: var(--font-sc); font-weight: 400; font-size: 1.28em; color: #f6ecd0; letter-spacing: .02em; }
+.pad > .who i { font-family: var(--font-display); font-style: italic; color: var(--muted); }
+.pad > .acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 </style></head><body><div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div><script>/* Keismey Studio — outils communs aux jeux du hub (même fichier dans chaque jeu).
 
    KS.support()                      ouvre la page de soutien (Ko-fi) dans un nouvel onglet
@@ -1856,7 +1883,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessinez le monde, un témoignage à la fois.',
-      version: 'V1.1',
+      version: 'V1.2',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -1881,6 +1908,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
       ghostOn: 'Indices affichés', ghostOff: 'Indices masqués',
       okMark: 'respecté', koMark: 'brisé', naMark: 'pas encore posé',
 
+      scoutShort: 'Éclaireur', askShort: 'Question', askShort2: 'Poser une question', nbHelpTitle: 'Jetons et règles', nbPick: 'Touchez un portrait pour lire son témoignage.',
       says: 'dit', reply: 'Réponse', alreadyAsked: 'A déjà répondu', noToken: 'Plus de jeton',
       scoutCardTitle: 'Éclaireur', scoutVerified: 'Fait vérifié sur le terrain', scoutNone: 'Aucun fait révélé.',
       scoutEmpty: 'Plus rien à révéler', askBtn: 'Poser une question', scoutBtn: 'Envoyer l’éclaireur',
@@ -1969,7 +1997,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'V1.1',
+      version: 'V1.2',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
@@ -1994,6 +2022,7 @@ window.ASSETS = {"stamps":{"village":{"src":"data:image/webp;base64,UklGRtQsAABX
       ghostOn: 'Clues shown', ghostOff: 'Clues hidden',
       okMark: 'respected', koMark: 'broken', naMark: 'not placed yet',
 
+      scoutShort: 'Scout', askShort: 'Question', askShort2: 'Ask a question', nbHelpTitle: 'Tokens and rules', nbPick: 'Tap a portrait to read their testimony.',
       says: 'says', reply: 'Reply', alreadyAsked: 'Already answered', noToken: 'No token left',
       scoutCardTitle: 'Scout', scoutVerified: 'Fact verified on the ground', scoutNone: 'No fact revealed.',
       scoutEmpty: 'Nothing left to reveal', askBtn: 'Ask a question', scoutBtn: 'Send the scout',
@@ -2746,8 +2775,11 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.1';
+  var VERSION = '1.2';
   var PATCH_NOTES = [
+    { v: '1.2', d: ['23 octobre 2026', '23 October 2026'],
+      fr: ['Carnet repensé : une rangée de portraits en haut, le témoin choisi en dessous. Plus besoin de tout faire défiler pour atteindre le dernier témoin.', 'Les jetons Éclaireur et Question tiennent sur une ligne ; le « ? » rappelle les règles de la contrée.', 'L’onglet Outils ne garde que les lieux à placer et les tracés, avec un compteur.'],
+      en: ['Notebook redesigned: a row of portraits on top, the chosen witness below. No more scrolling through everyone to reach the last witness.', 'Scout and Question tokens fit on one line; the “?” recalls the region’s rules.', 'The Tools tab now only holds the places to put down and the strokes, with a counter.'] },
     { v: '1.1', d: ['22 octobre 2026', '22 October 2026'],
       fr: ['Nouveau : un tutoriel guidé, « L’Atelier d’Orlan » : une mini-contrée où chaque geste est éclairé à l’écran. Il se relance depuis les Options.', 'Le bouton Indices est maintenant activé par défaut.'],
       en: ['New: a guided tutorial, “Orlan’s Workshop”: a mini region where each gesture is highlighted on screen. You can replay it from Options.', 'The Clues button is now on by default.'] },
@@ -2964,7 +2996,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     S.placed = ip ? ip.placed || {} : {}; S.drawn = ip ? ip.drawn || {} : {};
     S.asked = ip ? ip.asked || {} : {}; S.scoutsUsed = ip ? ip.scoutsUsed || 0 : 0;
     S.suspects = ip ? ip.suspects || {} : {}; S.pins = ip ? ip.pins || {} : {};
-    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = null; S.selected = null; S.armed = null;
+    S.mode = 'move'; S.activePath = null; S.ghost = true; S.panel = 'tools'; S.openCard = L.witnesses.length ? L.witnesses[0].id : null; S.selected = null; S.armed = null;
     S.undo = []; S.ruler = null; S.rulerUsed = false; S.tut = null; lastPanelKey = null; S.tf = 'all';
     save.started = true; persist();
     go('game'); renderAll();
@@ -3005,6 +3037,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   function shownEntries() {
     var all = entries(), pinned = all.filter(function (e) { return S.pins[e.key]; });
     if (pinned.length) return pinned;
+    if (S.openCard === 'scout') return all.filter(function (e) { return e.kind === 'scout'; });
     if (S.openCard) return all.filter(function (e) { return e.w && e.w.id === S.openCard; });
     return [];
   }
@@ -3194,7 +3227,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   }
   function renderTools(p) {
     var L = S.level, pad = h('div', { class: 'pad gutter' });
-    pad.appendChild(h('h3', { text: t('stampsTitle') }));
+    pad.appendChild(h('h3', { text: t('stampsTitle') + ' · ' + Object.keys(S.placed).length + '/' + L.places.length }));
     if (!Object.keys(S.placed).length) pad.appendChild(h('p', { class: 'help', text: t('stampsHelp') }));
     var chips = h('div', { class: 'chips' });
     L.places.forEach(function (pl) {
@@ -3210,7 +3243,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     pad.appendChild(chips);
 
     if (L.paths.length) {
-      pad.appendChild(h('h3', { text: t('pathsTitle') }));
+      pad.appendChild(h('h3', { text: t('pathsTitle') + ' · ' + Object.keys(S.drawn).filter(function (k) { return S.drawn[k] && S.drawn[k].length >= 2; }).length + '/' + L.paths.length }));
       if (!Object.keys(S.drawn).length) pad.appendChild(h('p', { class: 'help', text: t('pathsHelp') }));
       var tg = h('div', { class: 'tools' });
       L.paths.forEach(function (pa) {
@@ -3224,17 +3257,6 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
       pad.appendChild(tg);
     }
 
-    pad.appendChild(h('h3', { text: t('toolsTitle') }));
-    var sel = S.selected && S.placed[S.selected] ? S.selected : null;
-    var tools = h('div', { class: 'tools' }, [
-      h('button', { class: 'tool' + (S.mode === 'move' ? ' on' : ''), id: 't-move', onclick: setMove }, [h('b', {}, [uiIcon('main')]), t('move')]),
-      h('button', { class: 'tool' + (S.mode === 'ruler' ? ' on' : ''), id: 't-ruler', onclick: toggleRuler }, [h('b', {}, [ico('regle')]), t('ruler')]),
-      h('button', { class: 'tool' + (S.ghost ? ' on' : ''), id: 't-ghost', onclick: toggleGhost }, [h('b', {}, [ico('loupe')]), t('ghost')]),
-      h('button', { class: 'tool', id: 't-undo', disabled: S.undo.length ? null : true, onclick: undo }, [h('b', {}, [uiIcon('annuler')]), t('undo')]),
-      h('button', { class: 'tool', id: 't-remove', disabled: sel ? null : true, onclick: removeSel }, [h('b', {}, [uiIcon('corbeille')]), t('removeStamp')]),
-      h('button', { class: 'tool', id: 't-fit', onclick: function () { fitView(); draw(); } }, [h('b', {}, [uiIcon('cible')]), t('recenter')])
-    ]);
-    pad.appendChild(tools);
     if (S.ghost) pad.appendChild(h('div', { class: 'legend' }, [h('span', { text: t('ghostLegend') })]));
     p.appendChild(pad);
   }
@@ -3277,58 +3299,73 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     ]);
     return row;
   }
+  /* Aide du carnet : jetons et règles propres à la contrée (ouverte une fois d'office si la contrée a une règle spéciale) */
+  function openNbHelp() {
+    var L = S.level, kids = [h('h2', { text: t('nbHelpTitle') }), h('p', { text: t('tokenHelp') })];
+    if (L.night) kids.push(h('p', { text: t('nightRule') }));
+    if (L.single) kids.push(h('p', { text: t('singleHint') }));
+    if (L.fog) kids.push(h('p', { text: t('fogHint') }));
+    kids.push(h('button', { class: 'btn primary', id: 'btn-help-close', text: t('close'), onclick: closeModal }));
+    modal(kids);
+  }
+  function maybeAutoHelp() {
+    var L = S.level; if (!L || L.tuto || S.free || !(L.night || L.single || L.fog)) return;
+    save.helpSeen = save.helpSeen || {};
+    if (save.helpSeen[L.id]) return;
+    save.helpSeen[L.id] = true; persist();
+    setTimeout(function () { if (S.level === L && S.phase === 'play' && !$('#modal').classList.contains('on')) openNbHelp(); }, 450);
+  }
+  function pinCount(wid) { return entries().filter(function (e) { return (wid === 'scout' ? e.kind === 'scout' : (e.w && e.w.id === wid)) && S.pins[e.key]; }).length; }
   function renderNotebook(p) {
     var L = S.level, left = tokensLeft(), pad = h('div', { class: 'pad gutter' });
-    var tb = h('div', { class: 'tokenbar' }, [
-      h('button', { class: 'btn small', id: 'btn-scout', disabled: left.scout > 0 ? null : true, onclick: useScout }, [ico('jeton_eclaireur', 'sm'), ' ' + t('scout', { n: left.scout })]),
-      h('button', { class: 'btn small' + (S.ghost ? ' brass' : ''), id: 'btn-ghost', 'aria-pressed': S.ghost ? 'true' : 'false', onclick: function () { S.ghost = !S.ghost; sfx('pick'); draw(); renderPanel(); } }, [ico('loupe', 'sm'), ' ' + t('ghost')])
-    ]);
-    pad.appendChild(tb);
-    if (!S.scoutsUsed && !Object.keys(S.asked).length) pad.appendChild(h('p', { class: 'help', text: t('tokenHelp') }));
+    var sel = S.openCard;
+    var head = h('div', { class: 'nbhead' });
+    head.appendChild(h('div', { class: 'tokenbar' }, [
+      h('button', { class: 'chipt', id: 'btn-scout', disabled: left.scout > 0 ? null : true, 'aria-label': t('scout', { n: left.scout }), onclick: useScout }, [ico('jeton_eclaireur', 'sm'), h('span', { text: t('scoutShort') + ' ' }), h('b', { text: '×' + left.scout })]),
+      h('span', { class: 'chipt info' }, [ico('jeton_question', 'sm'), h('span', { text: t('askShort') + ' ' }), h('b', { text: '×' + left.ask })]),
+      h('button', { class: 'qbtn', id: 'btn-nbhelp', 'aria-label': t('nbHelpTitle'), text: '?', onclick: openNbHelp })
+    ]));
+    var strip = h('div', { class: 'strip', role: 'tablist' });
+    var people = L.witnesses.slice();
+    if (S.scoutsUsed) people.unshift({ id: 'scout', scout: true, name: { fr: 'Éclaireur', en: 'Scout' } });
+    people.forEach(function (w) {
+      var on = sel === w.id, n = pinCount(w.id);
+      var av = h('span', { class: 'av' }, [w.scout ? h('span', { class: 'pf card scoutav' }, [ico('jeton_eclaireur')]) : portrait(w, 'card'), n ? h('span', { class: 'badge', text: String(n) }) : null,
+        S.suspects[w.id] ? h('span', { class: 'flag' }, [ico('fanion', 'xs')]) : null]);
+      strip.appendChild(h('button', { class: 'pp' + (on ? ' sel' : ''), 'data-w': w.id, role: 'tab', 'aria-selected': on ? 'true' : 'false', 'aria-label': w.scout ? t('scoutCardTitle') : loc(w.name),
+        onclick: function () { S.openCard = on ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [av, h('span', { class: 'nm', text: w.scout ? t('scoutCardTitle') : loc(w.name) })]));
+    });
+    head.appendChild(strip);
+    pad.appendChild(head);
     if (L.night) {
-      pad.appendChild(h('p', { class: 'help', text: t('nightRule') }));
       pad.appendChild(h('div', { class: 'seg', role: 'group', id: 'tfilter' }, [['all', t('fAll')], ['day', t('fDay')], ['night', t('fNight')]].map(function (o) {
         return h('button', { class: 'btn' + (S.tf === o[0] ? ' on' : ''), 'data-tf': o[0], 'aria-pressed': S.tf === o[0] ? 'true' : 'false', text: o[1], onclick: function () { S.tf = o[0]; sfx('pick'); renderPanel(); } });
       })));
     }
-    if (L.single) pad.appendChild(h('p', { class: 'help', text: t('singleHint') }));
-    if (L.fog) pad.appendChild(h('p', { class: 'help', text: t('fogHint') }));
-    if (S.scoutsUsed) {
-      var sc = h('div', { class: 'card open' }, [
-        h('div', { class: 'inner', style: 'padding-top:12px' }, [h('h3', {}, [ico('jeton_eclaireur', 'sm'), ' ' + t('scoutCardTitle')])].concat(
-          entries().filter(function (e) { return e.kind === 'scout'; }).map(stmtRow)))
-      ]);
-      pad.appendChild(sc);
+    if (sel === 'scout') {
+      pad.appendChild(h('div', { class: 'who' }, [h('b', { text: t('scoutCardTitle') })]));
+      entries().filter(function (e) { return e.kind === 'scout'; }).forEach(function (e) { pad.appendChild(stmtRow(e)); });
+    } else {
+      var w = L.witnesses.filter(function (x) { return x.id === sel; })[0];
+      if (!w) pad.appendChild(h('p', { class: 'help', id: 'nb-pick', text: t('nbPick') }));
+      else {
+        var ents = entries().filter(function (e) { return e.w && e.w.id === w.id && !(L.night && ((S.tf === 'day' && e.st.night) || (S.tf === 'night' && e.st.day))); });
+        pad.appendChild(h('div', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', {}, [loc(w.job)])]));
+        pad.appendChild(h('p', { class: 'trait', text: loc(w.trait) }));
+        ents.forEach(function (e) { pad.appendChild(stmtRow(e)); });
+        if (!Object.keys(S.pins).length) pad.appendChild(h('p', { class: 'help', text: t('tapPin') }));
+        var asked = !!S.asked[w.id], canAsk = !asked && left.ask > 0;
+        var acts = h('div', { class: 'acts' });
+        if (w.ask) acts.appendChild(h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, onclick: function () { askWitness(w); } }, [!asked && left.ask > 0 ? ico('jeton_question', 'sm') : null, ' ' + (asked ? t('alreadyAsked') : (left.ask > 0 ? t('askShort2') : t('noToken')))]));
+        acts.appendChild(h('label', { class: 'check' }, [
+          h('input', { type: 'checkbox', 'data-suspect': w.id, checked: S.suspects[w.id] ? true : null, onchange: function (ev) { if (ev.target.checked) S.suspects[w.id] = true; else delete S.suspects[w.id]; sfx('pick'); persistProgress(); renderPanel(); } }),
+          h('span', { text: t('suspect') })
+        ]));
+        pad.appendChild(acts);
+      }
     }
-    L.witnesses.forEach(function (w) {
-      var open = S.openCard === w.id;
-      var ents = entries().filter(function (e) { return e.w && e.w.id === w.id && !(L.night && ((S.tf === 'day' && e.st.night) || (S.tf === 'night' && e.st.day))); });
-      var card = h('div', { class: 'card' + (open ? ' open' : ''), 'data-w': w.id }, [
-        h('button', { class: 'card-h', style: 'display:flex;align-items:center;gap:10px;padding:10px 12px;min-height:56px;width:100%;background:none;border:0;text-align:left;cursor:pointer;color:inherit', 'aria-expanded': open ? 'true' : 'false',
-          onclick: function () { S.openCard = open ? null : w.id; sfx('pick'); draw(); renderPanel(); tutCheck(); } }, [
-          portrait(w, 'card'),
-          h('span', { class: 'who' }, [h('b', { text: loc(w.name) }), h('i', {}, [loc(w.job) + (S.suspects[w.id] ? ' · ' : ''), S.suspects[w.id] ? ico('fanion', 'xs') : null, S.suspects[w.id] ? ' ' + t('suspected') : ''])]),
-          h('span', { class: 'chev', text: '›' })
-        ])
-      ]);
-      var inner = h('div', { class: 'inner' });
-      inner.appendChild(h('p', { class: 'trait', text: loc(w.trait) }));
-      if (!Object.keys(S.pins).length) inner.appendChild(h('p', { class: 'help', text: t('tapPin') }));
-      ents.forEach(function (e) { inner.appendChild(stmtRow(e)); });
-      var asked = !!S.asked[w.id];
-      var canAsk = !asked && left.ask > 0;
-      if (w.ask) inner.appendChild(h('div', { class: 'actions' }, [
-        h('button', { class: 'btn small', 'data-ask': w.id, disabled: canAsk ? null : true, onclick: function () { askWitness(w); } }, [!asked && left.ask > 0 ? ico('jeton_question', 'sm') : null, ' ' + (asked ? t('alreadyAsked') : (left.ask > 0 ? t('ask', { n: left.ask }) : t('noToken')))])
-      ]));
-      var lab = h('label', { class: 'check' }, [
-        h('input', { type: 'checkbox', 'data-suspect': w.id, checked: S.suspects[w.id] ? true : null, onchange: function (ev) { if (ev.target.checked) S.suspects[w.id] = true; else delete S.suspects[w.id]; sfx('pick'); persistProgress(); renderPanel(); } }),
-        h('span', { text: t('suspect') })
-      ]);
-      inner.appendChild(lab);
-      card.appendChild(inner);
-      pad.appendChild(card);
-    });
     p.appendChild(pad);
+    maybeAutoHelp();
   }
   function askWitness(w) {
     var left = tokensLeft(); if (S.asked[w.id] || left.ask < 1 || !w.ask) return;
@@ -3338,7 +3375,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
   }
   function useScout() {
     var left = tokensLeft(); if (left.scout < 1) return;
-    S.scoutsUsed++; S.pins['scout:' + (S.scoutsUsed - 1)] = true; sfx('reveal'); buzz(15);
+    S.scoutsUsed++; S.openCard = 'scout'; S.pins['scout:' + (S.scoutsUsed - 1)] = true; sfx('reveal'); buzz(15);
     persistProgress(); draw(); renderPanel(); tutCheck();
   }
 
@@ -3347,7 +3384,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
      elle avance toute seule quand le joueur a fait le geste. */
   var TUT_STEPS = [
     { target: '#btn-notebook', done: function () { return S.panel === 'notebook'; } },
-    { target: '.card[data-w="odo"] .card-h', done: function () { return S.openCard === 'odo'; } },
+    { target: '.pp[data-w="odo"]', done: function () { return S.openCard === 'odo'; } },
     { target: '.stmt', done: function () { return Object.keys(S.pins).length > 0; } },
     { target: '#btn-tools', done: function () { return S.panel === 'tools'; } },
     { target: '.chip[data-id="moulin"]', done: function () { return !!S.placed.moulin; } },
