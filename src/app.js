@@ -230,8 +230,11 @@
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.2';
+  var VERSION = '1.3';
   var PATCH_NOTES = [
+    { v: '1.3', d: ['26 octobre 2026', '26 October 2026'],
+      fr: ['Le jeu te tutoie, comme les autres jeux du studio (le roi et les témoins gardent leurs manières).', 'Logo Keismey Studio au lancement.', 'Options : crédits du jeu.', 'Un lien partagé vers le jeu affiche maintenant une image et une description.'],
+      en: ['Keismey Studio logo at launch.', 'Options: game credits.', 'A shared link to the game now shows a picture and a description.'] },
     { v: '1.2', d: ['23 octobre 2026', '23 October 2026'],
       fr: ['Carnet repensé : une rangée de portraits en haut, le témoin choisi en dessous. Plus besoin de tout faire défiler pour atteindre le dernier témoin.', 'Les jetons Éclaireur et Question tiennent sur une ligne ; le « ? » rappelle les règles de la contrée.', 'L’onglet Outils ne garde que les lieux à placer et les tracés, avec un compteur.'],
       en: ['Notebook redesigned: a row of portraits on top, the chosen witness below. No more scrolling through everyone to reach the last witness.', 'Scout and Question tokens fit on one line; the “?” recalls the region’s rules.', 'The Tools tab now only holds the places to put down and the strokes, with a counter.'] },
@@ -290,7 +293,7 @@
       h('button', { class: 'btn', text: t('atlas'), onclick: function () { go('atlas'); } }),
       h('button', { class: 'btn ghost', text: t('settings'), onclick: openSettings })
     ]));
-    el.appendChild(h('div', { class: 'ver', text: 'Keismey Studio · ' + t('version') }));
+    el.appendChild(h('div', { class: 'ver', text: t('version') + ' · Keismey Studio' }));
   }
 
   /* ───────────── atlas ───────────── */
@@ -1180,6 +1183,7 @@
       ]),
       h('p', { class: 'help', id: 'save-status', text: (window.Cloud && window.Cloud.active()) ? t('saveCloud') : t('saveLocal') }),
       h('p', { class: 'help', text: 'Le Cartographe · ' + t('version') + ' · Keismey Studio. ' + t('about') }),
+      h('p', { class: 'help', text: t('credits') }),
       h('button', { class: 'btn primary', id: 'btn-close', text: t('close'), onclick: closeModal })
     ]);
   }
@@ -1825,6 +1829,19 @@
   }
 
   /* ───────────── démarrage ───────────── */
+  /* Logo Keismey Studio au lancement, avant l'écran titre (toucher pour passer), comme les autres jeux du studio */
+  function studioSplash() {
+    if (!window.STUDIO_LOGO) return false;
+    var d = h('div', { class: 'studio-splash' }, [h('img', { src: window.STUDIO_LOGO, alt: 'Keismey Studio', draggable: 'false' })]);
+    document.body.appendChild(d);
+    var gone = false;
+    var end = function () { if (gone) return; gone = true; d.classList.add('out'); setTimeout(function () { d.remove(); }, 650); };
+    d.addEventListener('pointerdown', end);
+    var im = d.querySelector('img'), arm = function () { setTimeout(end, 2400); };
+    if (im.complete) arm(); else { im.onload = arm; im.onerror = end; }
+    setTimeout(end, 5000);
+    return true;
+  }
   function boot() {
     var app = $('#app');
     ['title', 'atlas', 'briefing', 'free', 'game'].forEach(function (n) { app.appendChild(h('section', { id: n, class: 'screen' })); });
@@ -1839,8 +1856,9 @@
     try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
     applySettings(); buildTitle(); buildGame(); go('title');
-    if (!save.pnV) { var had = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0; if (had) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, 900); else { save.pnV = VERSION; persist(); } }
-    else if (save.pnV !== VERSION) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, 900);
+    var pnDelay = studioSplash() ? 3300 : 900;
+    if (!save.pnV) { var had = Object.keys(save.progress).length > 0 || Object.keys(save.inprogress).length > 0; if (had) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, pnDelay); else { save.pnV = VERSION; persist(); } }
+    else if (save.pnV !== VERSION) setTimeout(function () { if (!$('#modal').classList.contains('on')) openNotes(); }, pnDelay);
     $('#modal').addEventListener('pointerdown', function (e) { if (e.target === $('#modal')) closeModal(); });
 
     /* Bouton retour du téléphone (hub Keismey Studio, voir ks-back.js) */

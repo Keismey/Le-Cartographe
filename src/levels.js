@@ -22,7 +22,7 @@
       title: { fr: 'La Vallée des Trois Meuniers', en: 'The Valley of the Three Millers' },
       scale: 20, tol: { ok: 12, near: 20 }, tokens: { ask: 2, scout: 1 },
       king: {
-        fr: 'Orlan est parti sans prévenir. Vous reprenez ses cartes. Et ses secrets, peut-être.\n\n« Trois moulins nourrissent ma capitale. Où sont-ils ? »',
+        fr: 'Orlan est parti sans prévenir. Tu reprends ses cartes. Et ses secrets, peut-être.\n\n« Trois moulins nourrissent ma capitale. Où sont-ils ? »',
         en: 'Orlan left without a word. You take over his maps. And his secrets, perhaps.\n\n"Three mills feed my capital. Where are they?"'
       },
       hint: {
@@ -116,7 +116,7 @@
         { k: 'rel', a: 'auberge', b: 'moulin_milieu', cap: 'NE',
           text: { fr: 'L’auberge est bien au nord-est du Moulin Milieu.', en: 'The inn really is northeast of the Middle Mill.' } }
       ],
-      outro: { fr: 'Pas mal pour un début. Le royaume vous attend.', en: 'Not bad for a start. The kingdom awaits you.' },
+      outro: { fr: 'Pas mal pour un début. Le royaume t’attend.', en: 'Not bad for a start. The kingdom awaits you.' },
       note:  { fr: 'Cherche toujours deux voix qui s’accordent.', en: 'Always look for two voices that agree.' }
     },
 
@@ -390,7 +390,7 @@
         S('rel', { a: 'mont', b: 'col', cap: 'NE' }, 'Le Mont est au nord-est du Col.', 'The Mount is northeast of the Pass.'),
         S('rel', { a: 'lac', b: 'source', j: 2, jmin: true }, 'Le lac est à plus de deux journées de la Source.', 'The lake is more than two days from the Spring.')
       ],
-      outro: T('Vous mesurez des montagnes sans les gravir. Impressionnant.', 'You measure mountains without climbing them. Impressive.'),
+      outro: T('Tu mesures des montagnes sans les gravir. Impressionnant.', 'You measure mountains without climbing them. Impressive.'),
       note:  T('Le menteur a toujours une raison ; trouve-la.', 'A liar always has a reason; find it.')
     },
 
@@ -465,7 +465,7 @@
         S('rel', { a: 'ruines', b: 'mare', cap: 'E', j: 2.5, approx: true }, 'Les Ruines sont à l’est de la mare, à deux journées et demie environ.', 'The Ruins are east of the pond, about two days and a half.'),
         S('rel', { a: 'sorciere', b: 'ruines', cap: 'W' }, 'La cabane de la sorcière est à l’ouest des Ruines.', 'The witch’s hut is west of the Ruins.')
       ],
-      outro: T('La forêt bouge, mais votre carte, non.', 'The forest moves, but your map does not.'),
+      outro: T('La forêt bouge, mais ta carte, non.', 'The forest moves, but your map does not.'),
       note:  T('Roi ou berger, chacun voit la forêt de son côté.', 'King or shepherd, each sees the forest from their own side.')
     },
 
@@ -637,7 +637,7 @@
         S('rel', { a: 'phare_brumel', b: 'phare_matis', j: 2, jmin: true }, 'Le Brumel est à plus de deux journées du Grand-Mât.', 'The Brumel is more than two days from the Great Mast.'),
         S('rel', { a: 'village_coeur', b: 'phare_brumel', cap: 'E', j: 2.2, approx: true }, 'Le Village du Cœur est à l’est du Brumel, à deux journées un quart.', 'Heart Village is east of the Brumel, two days and a quarter away.')
       ],
-      outro: T('Cent phares, une seule carte. Les marins vous doivent un verre.', 'A hundred lighthouses, one map. The sailors owe you a drink.'),
+      outro: T('Cent phares, une seule carte. Les marins te doivent un verre.', 'A hundred lighthouses, one map. The sailors owe you a drink.'),
       note:  T('Regarde les phares : ils savent où sont les autres.', 'Watch the lighthouses: they know where the others are.')
     },
 

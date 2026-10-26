@@ -583,3 +583,8 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
 .pad > .who b { font-family: var(--font-sc); font-weight: 400; font-size: 1.28em; color: #f6ecd0; letter-spacing: .02em; }
 .pad > .who i { font-family: var(--font-display); font-style: italic; color: var(--muted); }
 .pad > .acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* logo Keismey Studio au lancement */
+.studio-splash { position: fixed; inset: 0; z-index: 9999; background: #000; display: grid; place-items: center; cursor: pointer; transition: opacity .6s ease; }
+.studio-splash img { width: min(58vw, 260px); height: auto; opacity: 0; animation: studioIn 1s ease-out .15s forwards; }
+.studio-splash.out { opacity: 0; pointer-events: none; }
+@keyframes studioIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }

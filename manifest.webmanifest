@@ -1,7 +1,7 @@
 {
   "name": "Le Cartographe",
   "short_name": "Cartographe",
-  "description": "Dessinez le monde, un témoignage à la fois.",
+  "description": "Dessine le monde, un témoignage à la fois.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

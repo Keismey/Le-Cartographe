@@ -8,18 +8,27 @@ var musicJs = (function () {
   try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f; }); } catch (e) {}
   return 'window.MUSIC=' + JSON.stringify(o) + ';';
 })();
-var js = ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'terrain.js', 'art.js', 'cloud.js'].map(S).join('\n;\n') + '\n;\n' + musicJs + '\n;\n' + S('app.js');
+var logo = (function () { try { return 'window.STUDIO_LOGO="data:image/webp;base64,' + fs.readFileSync(path.join(__dirname, 'assets', 'out', 'keismey-studio.webp')).toString('base64') + '";'; } catch (e) { return ''; } })();
+var js = logo + '\n;\n' + ['assets.js', 'core.js', 'levels.js', 'i18n.js', 'terrain.js', 'art.js', 'cloud.js'].map(S).join('\n;\n') + '\n;\n' + musicJs + '\n;\n' + S('app.js');
 var b64 = function (f) { try { return fs.readFileSync(path.join(__dirname, 'assets', 'out', f)).toString('base64'); } catch (e) { return ''; } };
 var ic96 = b64('icon-192.png');
 var fonts = ic96 ? '<link rel="icon" type="image/png" href="data:image/png;base64,' + ic96 + '"><link rel="apple-touch-icon" href="data:image/png;base64,' + ic96 + '">' : '';
 var body = '<div id="app"></div><div id="modal"></div><div id="toast" role="status"></div><div id="dragghost"></div>';
 var title = 'Le Cartographe';
 
+var URL_ = 'https://keismey.github.io/Le-Cartographe/';
+var DESC = 'Dessine le monde d’après les témoignages des habitants : place les lieux, trace les routes et rends ta carte au roi. Gratuit, sans pub, dans le navigateur.';
+var og = '<meta name="description" content="' + DESC + '">' +
+  '<meta property="og:type" content="website"><meta property="og:site_name" content="Keismey Studio"><meta property="og:title" content="Le Cartographe">' +
+  '<meta property="og:description" content="' + DESC + '"><meta property="og:url" content="' + URL_ + '">' +
+  '<meta property="og:image" content="' + URL_ + 'og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">' +
+  '<meta property="og:image:alt" content="Le Cartographe · Keismey Studio"><meta property="og:locale" content="fr_FR"><meta property="og:locale:alternate" content="en_GB">' +
+  '<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Le Cartographe"><meta name="twitter:description" content="' + DESC + '"><meta name="twitter:image" content="' + URL_ + 'og.jpg">';
 var swReg = '<script>if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>';
 var cfBeacon = "<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"cdb82226cd1b401d9e4f4e899f9b8425\"}'></script><!-- End Cloudflare Web Analytics -->";
 var full = '<!doctype html>\n<html lang="fr"><head><meta charset="utf-8">' +
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">' +
-  '<meta name="theme-color" content="#15242c"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Le Cartographe"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>' + title + '</title>' + fonts +
+  '<meta name="theme-color" content="#15242c"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Le Cartographe"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><title>' + title + '</title>' + og + fonts +
   '<style>' + css + '</style></head><body>' + body + '<script>' + S('ks-studio.js') + '</script><script>' + S('ks-back.js') + '</script><script>' + js + '</script>' + swReg + cfBeacon + '</body></html>\n';
 
 /* Fragment pour l'outil Artifact : pas de doctype/html/head/body, titre + méta en tête */
@@ -39,7 +48,7 @@ console.log('index.html ' + Math.round(full.length / 1024) + ' Ko · artifact.ht
 var crypto = require('crypto');
 var ver = crypto.createHash('sha1').update(full).digest('hex').slice(0, 10);
 fs.writeFileSync(path.join(__dirname, 'dist', 'manifest.webmanifest'), JSON.stringify({
-  name: 'Le Cartographe', short_name: 'Cartographe', description: 'Dessinez le monde, un témoignage à la fois.',
+  name: 'Le Cartographe', short_name: 'Cartographe', description: 'Dessine le monde, un témoignage à la fois.',
   lang: 'fr', start_url: './', scope: './', display: 'standalone', orientation: 'portrait',
   background_color: '#15242c', theme_color: '#15242c',
   icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }]
