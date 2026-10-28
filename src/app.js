@@ -233,8 +233,8 @@
   var VERSION = '1.4';
   var PATCH_NOTES = [
     { v: '1.4', d: ['28 octobre 2026', '28 October 2026'],
-      fr: ['Le bouton « Exporter la carte » devient « Partager ». Sur téléphone, le partage envoie l’image de la carte avec un petit texte : contrée, étoiles, score et lien. Rien du tracé n’est dévoilé.', 'Sur la carte finale, les petits points rouges au centre des tampons ont disparu.'],
-      en: ['The “Export map” button is now “Share”. On a phone, sharing sends the map image along with a short text: region, stars, score and a link. Nothing about the layout is given away.', 'On the final map, the little red dots at the centre of the stamps are gone.'] },
+      fr: ['Le bouton « Exporter la carte » devient « Partager ». Sur téléphone, le partage envoie l’image de la carte avec un petit texte : contrée, étoiles, score et lien. Rien du tracé n’est dévoilé.', 'Certaines applis (Threads, par exemple) ignorent le texte quand il accompagne une image : le bouton « Copier le texte » permet de le coller à la main.', 'Sur la carte finale, les petits points rouges au centre des tampons ont disparu.'],
+      en: ['The “Export map” button is now “Share”. On a phone, sharing sends the map image along with a short text: region, stars, score and a link. Nothing about the layout is given away.', 'Some apps (Threads, for one) drop the text when it comes with an image: the “Copy the text” button lets you paste it yourself.', 'On the final map, the little red dots at the centre of the stamps are gone.'] },
     { v: '1.3', d: ['26 octobre 2026', '26 October 2026'],
       fr: ['Le jeu te tutoie, comme les autres jeux du studio (le roi et les témoins gardent leurs manières).', 'Logo Keismey Studio au lancement.', 'Options : crédits du jeu.', 'Un lien partagé vers le jeu affiche maintenant une image et une description.'],
       en: ['Keismey Studio logo at launch.', 'Options: game credits.', 'A shared link to the game now shows a picture and a description.'] },
@@ -1115,6 +1115,7 @@
         h('h2', { text: t('exportTitle') }),
         h('img', { src: url, alt: '', style: 'width:100%;border-radius:6px;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default' }),
         h('p', { class: 'help', text: t('holdToSave') }),
+        h('button', { class: 'linkbtn', id: 'btn-copytext', text: t('copyShare'), onclick: function () { copyText(shareText(o)).then(function (ok) { toast(t(ok ? 'shareCopied' : 'exportFail')); }); } }),
         h('div', { class: 'btnrow' }, [
           h('a', { class: 'btn', href: url, download: 'cartographe-' + (o.file || 'carte') + '.png', style: 'text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center', text: t('download') }),
           shareBtn,
