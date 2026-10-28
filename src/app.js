@@ -230,8 +230,11 @@
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.3';
+  var VERSION = '1.4';
   var PATCH_NOTES = [
+    { v: '1.4', d: ['28 octobre 2026', '28 October 2026'],
+      fr: ['Le bouton « Exporter la carte » devient « Partager ». Sur téléphone, le partage envoie l’image de la carte avec un petit texte : contrée, étoiles, score et lien. Rien du tracé n’est dévoilé.', 'Sur la carte finale, les petits points rouges au centre des tampons ont disparu.'],
+      en: ['The “Export map” button is now “Share”. On a phone, sharing sends the map image along with a short text: region, stars, score and a link. Nothing about the layout is given away.', 'On the final map, the little red dots at the centre of the stamps are gone.'] },
     { v: '1.3', d: ['26 octobre 2026', '26 October 2026'],
       fr: ['Le jeu te tutoie, comme les autres jeux du studio (le roi et les témoins gardent leurs manières).', 'Logo Keismey Studio au lancement.', 'Options : crédits du jeu.', 'Un lien partagé vers le jeu affiche maintenant une image et une description.'],
       en: ['Keismey Studio logo at launch.', 'Options: game credits.', 'A shared link to the game now shows a picture and a description.'] },
@@ -1107,13 +1110,7 @@
       }
       x.fillStyle = '#a9b9b4'; x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.font = '30px ' + FONT; x.fillText('Keismey Studio · ' + t('title'), W / 2, H - 28);
       var url = c.toDataURL('image/png');
-      var shareBtn = null;
-      try {
-        if (navigator.canShare && navigator.share) {
-          var blob = dataToBlob(url), file = new File([blob], 'cartographe.png', { type: 'image/png' });
-          if (navigator.canShare({ files: [file] })) shareBtn = h('button', { class: 'btn', text: t('share'), onclick: function () { try { navigator.share({ files: [file], title: o.title }).catch(function () {}); } catch (e) {} } });
-        }
-      } catch (e) {}
+      var shareBtn = h('button', { class: 'btn', id: 'btn-share', text: t('share'), onclick: function () { shareMap(url, o); } });
       modal([
         h('h2', { text: t('exportTitle') }),
         h('img', { src: url, alt: '', style: 'width:100%;border-radius:6px;-webkit-user-select:auto;user-select:auto;-webkit-touch-callout:default' }),
@@ -1125,6 +1122,48 @@
         ])
       ]);
     } catch (e) { toast(t('exportFail')); }
+  }
+  /* Texte partagé avec l'image : contrée + étoiles + score (rien du tracé ni des indices), lien vers le jeu */
+  var SHARE_URL = 'https://keismey.github.io/Le-Cartographe/';
+  function shareText(o) {
+    var head, line = '';
+    if (o.stars != null) {
+      var st = ''; for (var i = 0; i < 3; i++) st += i < o.stars ? '⭐' : '☆';
+      head = t('shareHead', { n: o.final.level.id, title: o.title });
+      line = st + ' ' + Math.round(o.score) + ' %';
+    } else head = t('shareFree', { title: o.title });
+    return [head, line, SHARE_URL + '?lang=' + I.lang].filter(Boolean).join('\n');
+  }
+  function copyText(text) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacyCopy(text); }); } catch (e) {}
+    return Promise.resolve(legacyCopy(text));
+  }
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-1000px;top:0;opacity:0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy'); ta.remove(); return !!ok;
+    } catch (e) { return false; }
+  }
+  /* image + texte si l'appareil accepte les fichiers, sinon texte seul, sinon copie dans le presse-papiers */
+  var sharing = false;
+  function shareMap(url, o) {
+    if (sharing) return;
+    var text = shareText(o); sharing = true;
+    function done() { sharing = false; }
+    function fallbackCopy() { copyText(text).then(function (ok) { toast(t(ok ? 'shareCopied' : 'exportFail')); done(); }); }
+    function textOnly() {
+      navigator.share({ text: text }).then(done, function (e) { if (e && e.name === 'AbortError') done(); else fallbackCopy(); });
+    }
+    if (typeof navigator.share !== 'function') return fallbackCopy();
+    try {
+      var file = new File([dataToBlob(url)], 'cartographe.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], text: text }).then(done, function (e) { if (e && e.name === 'AbortError') done(); else textOnly(); });
+        return;
+      }
+    } catch (e) {}
+    textOnly();
   }
   function dataToBlob(url) {
     var b = atob(url.split(',')[1]), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
@@ -1266,8 +1305,10 @@
       if (o.ghost) c.globalAlpha *= .72;
       c.drawImage(im, x - w / 2, y - hh / 2, w, hh);
       c.globalAlpha = o.alpha == null ? 1 : o.alpha;
-      c.fillStyle = o.ghost ? '#b5851c' : '#8a2f1d'; c.strokeStyle = '#f4ead0'; c.lineWidth = Math.max(1, R * .07);
-      c.beginPath(); c.arc(x, y, Math.max(2.5, R * .13), 0, 6.3); c.fill(); c.stroke();
+      if (!o.noDot) {
+        c.fillStyle = o.ghost ? '#b5851c' : '#8a2f1d'; c.strokeStyle = '#f4ead0'; c.lineWidth = Math.max(1, R * .07);
+        c.beginPath(); c.arc(x, y, Math.max(2.5, R * .13), 0, 6.3); c.fill(); c.stroke();
+      }
     } else {
       c.fillStyle = o.ghost ? 'rgba(241,231,200,.55)' : '#f1e7c8'; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill();
       c.lineWidth = Math.max(1.5, R * .09); c.strokeStyle = o.ghost ? '#b5851c' : Art.INK;
@@ -1498,7 +1539,7 @@
     } else {
       L.places.forEach(function (pl) {
         if (SEL === pl.id) return; var pp = PLD[pl.id]; if (!pp) return; var s = P(pp);
-        stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: FIN ? 1 : popScale(pl.id) });
+        stamp(c, s.x, s.y, pl, { R: Rr, q: Q, pop: FIN ? 1 : popScale(pl.id), noDot: !!FIN });
       });
       if (SEL && PLD[SEL]) { var sp2 = P(PLD[SEL]); stamp(c, sp2.x, sp2.y, placeById(SEL), { R: Rr, selected: true, q: Q, pop: popScale(SEL), badge: !!o.interactive && S.phase === 'play' && !(G && G.type === 'stamp' && G.moved) }); }
     }
