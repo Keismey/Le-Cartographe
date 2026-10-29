@@ -428,6 +428,27 @@ img.portrait { border: 2.5px solid var(--brass); box-shadow: 0 2px 6px rgba(0,0,
 .region .sub { font-family: var(--font-display); letter-spacing: 0; font-size: 1em; }
 .region .meta .sub:first-child { font-family: var(--font-sc); letter-spacing: .06em; font-size: .95em; }
 #title h1 { font-size: clamp(1.9rem, 9vw, 3.4rem); }
+/* écran titre en paysage / fenêtre basse : tout doit tenir sans recouvrir la version */
+@media (max-height: 540px) {
+  #title { gap: 8px; }
+  #title.art { padding-top: max(10px, env(safe-area-inset-top, 0px)); }
+  #title .rose { width: 64px; height: 64px; }
+  #title .wm-small b { font-size: .95rem; }
+  #title h1 { font-size: clamp(1.6rem, 10vh, 2.8rem); }
+  #title .wm-orn { width: min(200px, 60vw); margin-top: 0; }
+  #title.art p.tag { font-size: 1.05em; max-width: 40ch; margin-top: 0; }
+  #title .stack { gap: 8px; margin-top: 4px; }
+  #title.art .stack { margin-bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + 24px); }
+  #title .stack .btn { min-height: 44px; }
+  #title .stack .btn.primary { min-height: 50px; }
+}
+@media (max-height: 360px) {
+  #title { gap: 5px; }
+  #title .stack { gap: 6px; }
+  #title .stack .btn.primary { min-height: 44px; }
+  #title.art p.tag { font-size: .95em; }
+  #title .wm-orn { display: none; }
+}
 
 /* ═════════ V0.4 : barre d'outils latérale, médaillons, cartes finies, mode libre ═════════ */
 #mapwrap { display: flex; }
