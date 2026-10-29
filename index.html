@@ -222,6 +222,7 @@ h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
 #modal { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,14,18,.72); padding: 16px; }
 #modal.on { display: flex; }
 #modal .box { width: min(440px, 100%); max-height: 100%; overflow-y: auto; background: var(--night-2); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+#modal .box:focus, #ks-dlg .kb:focus { outline: none; }   /* le cadre reçoit le focus à l’ouverture ; seuls les boutons montrent l’anneau */
 #modal h2 { font-size: 1.3em; color: var(--paper); }
 #modal p { margin: 0; }
 #modal textarea { width: 100%; min-height: 90px; background: var(--night); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: .8em; padding: 8px; -webkit-user-select: text; user-select: text; }
@@ -427,6 +428,7 @@ img.portrait { border: 2.5px solid var(--brass); box-shadow: 0 2px 6px rgba(0,0,
 /* fenêtres & notifications : parchemin */
 #modal { background: rgba(6,12,16,.78); backdrop-filter: blur(3px); }
 #modal .box { background: linear-gradient(170deg, #f1e7c9, #e3d3a4); color: var(--paper-ink); border: 1px solid #8a6a2a; border-radius: 10px; box-shadow: inset 0 0 0 4px rgba(244,234,208,.55), inset 0 0 0 5px rgba(138,106,42,.5), 0 20px 50px rgba(0,0,0,.6); padding: 24px 22px; animation: scr .22s ease-out both; }
+#modal :focus-visible { outline-color: #7a5418; }   /* anneau de focus lisible sur le parchemin (4,5:1) ; le laiton y est presque invisible */
 #modal h2 { font-family: var(--font-sc); font-size: 1.55em; color: #3a2c1c; letter-spacing: .02em; }
 #modal p, #modal .setrow, #modal label { font-family: var(--font-display); font-size: 1.08em; color: #3a2c1c; }
 #modal .btn { background: linear-gradient(180deg, #f7eed3, #e4d4a5); border-color: #a38a59; color: #3a2c1c; text-shadow: none; box-shadow: inset 0 1px 0 #fff8, 0 2px 0 #8a6a2a; font-family: var(--font-sc); font-size: 1.05em; }
@@ -709,7 +711,7 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
     '#ks-dlg textarea{width:100%;box-sizing:border-box;height:84px;margin:0 0 8px;background:#0f0d12;color:#f3ecdf;border:1px solid #4a4452;border-radius:8px;padding:8px;font:12px/1.3 monospace;resize:none}' +
     '#ks-dlg button{display:block;width:100%;margin:0 0 8px;padding:11px 10px;border-radius:10px;border:0;font:inherit;font-weight:700;font-size:15px;background:#3a3442;color:#f3ecdf;cursor:pointer}' +
     '#ks-dlg button.ks-main{background:var(--ks-accent,#c9a45c);color:#16121a}#ks-dlg hr{border:0;border-top:1px solid #3a3442;margin:12px 0}' +
-    '#ks-dlg .ks-err{color:#ff8f7a}';
+    '#ks-dlg .ks-err{color:#ff8f7a}#ks-dlg .ks-err:empty{margin:0}';
 
   function saveDialog(o) {
     var L = TX[o.lang === 'en' ? 'en' : 'fr'], keys = o.keys;
@@ -717,13 +719,13 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
     if (!document.getElementById('ks-css')) { var st = document.createElement('style'); st.id = 'ks-css'; st.textContent = CSS; document.head.appendChild(st); }
     if (o.save) try { o.save(); } catch (e) {}
     var code = makeCode(keys);
-    var d = document.createElement('div'); d.id = 'ks-dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    var d = document.createElement('div'); d.id = 'ks-dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'ks-t');
     if (o.accent) d.style.setProperty('--ks-accent', o.accent);
-    d.innerHTML = '<div class="kb"><h2>' + L.title + '</h2>' +
-      (code ? '<p>' + L.intro + '</p><textarea readonly id="ks-out"></textarea><button class="ks-main" id="ks-copy">' + L.copy + '</button><button id="ks-file">' + L.file + '</button>' : '<p>' + L.empty + '</p>') +
-      '<hr><h2>' + L.load + '</h2><p>' + L.paste + '</p><textarea id="ks-in" autocomplete="off" spellcheck="false" placeholder="KS1…"></textarea>' +
-      '<button id="ks-pick">' + L.pick + '</button><button class="ks-main" id="ks-go">' + L.go + '</button><p class="ks-err" id="ks-msg" hidden></p>' +
-      '<hr><button id="ks-close">' + L.close + '</button><input type="file" id="ks-f" accept=".txt,text/plain" hidden></div>';
+    d.innerHTML = '<div class="kb"><h2 id="ks-t">' + L.title + '</h2>' +
+      (code ? '<p id="ks-out-l">' + L.intro + '</p><textarea readonly id="ks-out" aria-labelledby="ks-out-l"></textarea><button class="ks-main" id="ks-copy">' + L.copy + '</button><button id="ks-file">' + L.file + '</button>' : '<p>' + L.empty + '</p>') +
+      '<hr><h2>' + L.load + '</h2><p id="ks-in-l">' + L.paste + '</p><textarea id="ks-in" aria-labelledby="ks-in-l" autocomplete="off" spellcheck="false" placeholder="KS1…"></textarea>' +
+      '<button id="ks-pick">' + L.pick + '</button><button class="ks-main" id="ks-go">' + L.go + '</button><p class="ks-err" id="ks-msg" role="alert"></p>' +
+      '<hr><button id="ks-close">' + L.close + '</button><input type="file" id="ks-f" accept=".txt,text/plain" aria-label="' + L.pick + '" hidden></div>';
     document.body.appendChild(d);
     var $ = function (id) { return d.querySelector('#' + id); };
     var close = function () { d.remove(); };
@@ -882,7 +884,7 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
     var L = TS[o.lang] || TS.fr;
     if (!document.getElementById('ks-css')) { var st = document.createElement('style'); st.id = 'ks-css'; st.textContent = CSS; document.head.appendChild(st); }
     var old = document.getElementById('ks-dlg'); if (old) old.remove();
-    var d = document.createElement('div'); d.id = 'ks-dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+    var d = document.createElement('div'); d.id = 'ks-dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'ks-t');
     if (o.accent) d.style.setProperty('--ks-accent', o.accent);
     var box = function (id, title, when) {
       return '<div style="border:1px solid #4a4452;border-radius:10px;padding:10px 12px 2px;margin:0 0 10px">' +
@@ -891,7 +893,7 @@ img.bigthumb { width: min(100%, 340px); height: auto; }
         (when ? '<p style="margin:0 0 8px;font-size:13px;opacity:.7">' + L.mod + fmtDate(when, o.lang) + '</p>' : '') +
         '<button class="ks-main" id="ks-keep-' + id + '">' + L.keep + '</button></div>';
     };
-    d.innerHTML = '<div class="kb"><h2>' + (o.name ? o.name + ' · ' : '') + L.ctitle + '</h2><p>' + L.cintro + '</p>' +
+    d.innerHTML = '<div class="kb"><h2 id="ks-t">' + (o.name ? o.name + ' · ' : '') + L.ctitle + '</h2><p>' + L.cintro + '</p>' +
       box('here', L.here, o.localTime) + box('online', L.online, o.remoteTime) +
       (o.canLater ? '<button id="ks-later">' + L.later + '</button>' : '') + '</div>';
     document.body.appendChild(d);
@@ -3180,8 +3182,69 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     var el = $('#toast'); el.textContent = msg; el.classList.add('on');
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2200);
   }
-  function modal(nodes) { if (!$('#modal').classList.contains('on')) sfx('rustle'); var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
-  function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
+  function modal(nodes) {
+    if (!$('#modal').classList.contains('on')) sfx('rustle');
+    var m = $('#modal'), old = m.classList.contains('on') && $('#modal .box'), was = old ? dlgItems(old) : [], at = was.indexOf(document.activeElement), oldT = old && old.querySelector('h2');
+    oldT = oldT ? oldT.textContent : null;
+    dlgKeep(); clear(m);
+    var box = h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true', tabindex: '-1' }, nodes), t2 = box.querySelector('h2');
+    if (t2) { if (!t2.id) t2.id = 'modal-t'; box.setAttribute('aria-labelledby', t2.id); }
+    m.appendChild(box); m.classList.add('on');
+    // même fenêtre redessinée (un réglage changé dans les Options) : le focus reste sur le même bouton
+    var now = at >= 0 && oldT !== null && t2 && t2.textContent === oldT ? dlgItems(box) : [];
+    if (now.length === was.length && now[at]) try { now[at].focus({ preventScroll: true }); } catch (e) {}
+    dlgFocus(box);
+  }
+  function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); dlgRestore(); }
+
+  /* Clavier et lecteur d'écran : à l'ouverture d'une fenêtre (la nôtre ou la « Sauvegarde » commune #ks-dlg),
+     le focus y entre, Tab reste dedans, et le focus revient au bouton qui l'a ouverte. Échap est déjà traité par ks-back.js. */
+  var dlgBack = null, dlgT = 0;
+  function openDlg() { var k = document.getElementById('ks-dlg'); return k ? k.querySelector('.kb') || k : ($('#modal').classList.contains('on') ? $('#modal .box') : null); }
+  function dlgKeep() {   // retient le bouton d'origine, sauf si le focus est déjà dans une fenêtre
+    clearTimeout(dlgT);
+    var a = document.activeElement;
+    if (a && a !== document.body && !(a.closest && a.closest('#modal, #ks-dlg'))) dlgBack = a;
+  }
+  function dlgFocus(box) {
+    var a = document.activeElement;
+    if (box && !(a && box.contains(a))) try { box.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function dlgRestore() {
+    clearTimeout(dlgT);
+    dlgT = setTimeout(function () {   // après le rendu : le bouton d'origine a pu disparaître (changement d'écran)
+      var box = openDlg();
+      if (box) { dlgFocus(box); return; }
+      var b = dlgBack; dlgBack = null;
+      if (b && document.contains(b) && b.getClientRects().length && !b.disabled) try { b.focus({ preventScroll: true }); } catch (e) {}
+    }, 0);
+  }
+  function dlgItems(box) {
+    return [].slice.call(box.querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')).filter(function (e) {
+      return e.tabIndex >= 0 && !e.disabled && e.getClientRects().length;   // rien de caché (y compris dans un <details> fermé)
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    var box = openDlg(); if (!box) return;
+    var list = dlgItems(box), a = document.activeElement;
+    if (!list.length) { e.preventDefault(); dlgFocus(box); return; }
+    if (!box.contains(a) || a === box) { e.preventDefault(); list[e.shiftKey ? list.length - 1 : 0].focus(); return; }
+    // élément suivant / précédent dans l'ordre de la page ; au bout, on repart de l'autre côté
+    var after = list.filter(function (x) { return a.compareDocumentPosition(x) & 4; }), before = list.filter(function (x) { return a.compareDocumentPosition(x) & 2; });
+    if (e.shiftKey && !before.length) { e.preventDefault(); list[list.length - 1].focus(); }
+    else if (!e.shiftKey && !after.length) { e.preventDefault(); list[0].focus(); }
+  }, true);
+  function ksOpened(n) { dlgKeep(); var kb = n.querySelector('.kb') || n; kb.tabIndex = -1; dlgFocus(kb); }
+  function dlgWatch() {   // la fenêtre commune est ajoutée / retirée par ks-studio.js
+    var k = document.getElementById('ks-dlg'); if (k) ksOpened(k);   // déjà ouverte avant le démarrage du jeu
+    new MutationObserver(function (recs) {
+      recs.forEach(function (r) {
+        [].forEach.call(r.addedNodes, function (n) { if (n.id === 'ks-dlg') ksOpened(n); });
+        [].forEach.call(r.removedNodes, function (n) { if (n.id === 'ks-dlg') dlgRestore(); });
+      });
+    }).observe(document.body, { childList: true });
+  }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
   var VERSION = '1.5';
@@ -4892,6 +4955,7 @@ window.MUSIC={"atlas":"music/atlas.mp3","c1":"music/c1.mp3","c2":"music/c2.mp3",
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     document.addEventListener('visibilitychange', function () { if (document.hidden) { if (S.level && S.phase === 'play') persistProgress(); persistNow(); } });
     window.addEventListener('pagehide', function () { persistNow(); });
+    dlgWatch();
     try { if (window.Cloud) window.Cloud.start(function () { return save; }, mergeRemote); } catch (e) {}
     try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
