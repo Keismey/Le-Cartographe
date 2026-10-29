@@ -32,7 +32,7 @@ var fontsCss = (function () {
 })();
 var css = S('fonts.css') + S('style.css'), cssPage = fontsCss + S('style.css');
 var musicMap = {}, musicJs = (function () {
-  var dir = path.join(__dirname, 'assets', 'music'), o = {};
+  var dir = path.join(__dirname, 'music'), o = {};   // musiques : un seul exemplaire, celui publié à la racine
   try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f + '?v=' + hash(fs.readFileSync(path.join(dir, f))); }); } catch (e) {}
   musicMap = o;
   return 'window.MUSIC=' + JSON.stringify(o) + ';';
@@ -68,7 +68,7 @@ fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
 ['icon-192.png', 'icon-512.png', 'icon-maskable.png'].forEach(function (f) { try { fs.copyFileSync(path.join(__dirname, 'assets', 'out', f), path.join(__dirname, 'dist', f)); } catch (e) {} });
 try {
   fs.mkdirSync(path.join(__dirname, 'dist', 'music'), { recursive: true });
-  fs.readdirSync(path.join(__dirname, 'assets', 'music')).forEach(function (f) { fs.copyFileSync(path.join(__dirname, 'assets', 'music', f), path.join(__dirname, 'dist', 'music', f)); });
+  fs.readdirSync(path.join(__dirname, 'music')).forEach(function (f) { fs.copyFileSync(path.join(__dirname, 'music', f), path.join(__dirname, 'dist', 'music', f)); });
 } catch (e) {}
 Object.keys(outFiles).forEach(function (p) { fs.mkdirSync(path.join(__dirname, 'dist', path.dirname(p)), { recursive: true }); fs.writeFileSync(path.join(__dirname, 'dist', p), outFiles[p]); });
 fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), full);

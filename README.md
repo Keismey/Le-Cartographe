@@ -15,6 +15,7 @@ node build.js               # assemble src/* dans dist/
 node test/test.js --rapide  # indices vrais/faux, couverture, score (quelques secondes)
 node test/test.js           # tout, y compris le solveur qui vérifie que chaque contrée a une solution (plus de 5 minutes)
 ```
+Le build demande Node et Python 3 avec `fonttools` et `brotli` (conversion des polices en woff2) : `pip install fonttools brotli`.
 Lancer au moins `--rapide` avant chaque PR, et le test complet quand une contrée change (`src/levels.js`, `src/core.js`).
 
 ### Publier
@@ -31,10 +32,10 @@ GitHub Pages sert la racine de la branche `main` (`.nojekyll` présent). `build.
 - `src/cloud.js` : sauvegarde en ligne facultative, seulement quand le jeu tourne comme Artifact claude.ai (sinon tout reste dans le `localStorage`)
 - `src/sw.js` : modèle du service worker (`__VERSION__` remplacé au build)
 - `src/ks-studio.js`, `src/ks-back.js` : outils communs aux jeux Keismey Studio (soutien, écran studio) et gestion du bouton retour du téléphone
-- `assets/` : sources graphiques et sonores, non chargées par le jeu (mais servies par Pages comme tout le dépôt)
+- `assets/` : sources graphiques et prompts, non chargés par le jeu (mais servis par Pages comme tout le dépôt)
   - `raw/` : planches d'origine générées ; `out/` : images découpées, dont les icônes PWA et le logo studio repris par `build.js`
   - `process.py` : découpe les planches et régénère `src/assets.js` (Python, numpy, Pillow, scipy ; chemins absolus à adapter dans le fichier)
   - `data.js`, `build-assets.js` (génère `assets-page.html` et `assets-prompts.md`), `music-prompts.md` : prompts utilisés pour les images et les musiques
-  - `music/` : musiques sources, copiées par `build.js` dans `dist/music/`
   - `fonts/` : licences OFL des polices
-- `music/`, `icon-*.png`, `cover.webp`, `og.jpg` à la racine : fichiers publiés (`og.jpg` : image de partage 1200×630 ; `cover.webp` : image de couverture)
+- `music/` à la racine : les musiques, en un seul exemplaire. `build.js` les lit là (empreinte `?v=` pour le cache) et les copie dans `dist/music/` ; pour changer une musique, remplacer le fichier dans `music/` puis relancer le build.
+- `icon-*.png`, `cover.webp`, `og.jpg` à la racine : fichiers publiés (`og.jpg` : image de partage 1200×630 ; `cover.webp` : image de couverture)
