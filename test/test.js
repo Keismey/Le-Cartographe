@@ -1,7 +1,7 @@
-/* Tests des niveaux : node test/test.js */
+/* Tests des niveaux : node test/test.js  (--rapide : sans le solveur, quelques secondes) */
 var Core = require('../src/core.js');
 var Levels = require('../src/levels.js').list;
-var fails = 0;
+var fails = 0, QUICK = process.argv.indexOf('--rapide') >= 0;
 function ok(c, msg) { if (!c) { fails++; console.log('  ✗ ' + msg); } }
 function rng(seed) { var s = seed >>> 0; return function () { s |= 0; s = s + 0x6D2B79F5 | 0; var t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -67,6 +67,8 @@ Levels.forEach(function (L) {
   ok(sw.score === 0, 'score carte vide = ' + sw.score);
 
   /* les erreurs fautives doivent être « piégeuses » : placer selon la phrase fausse doit baisser le score */
+
+  if (QUICK) return;
 
   /* solveur : tracés fixés à la vérité, indices vrais uniquement */
   var R2 = rng(1234 + L.id), reached = 0, runs = 60, maxErr = 0, sumErr = 0, errs = [];
@@ -139,5 +141,5 @@ Levels.forEach(function (L) {
   console.log('  score d\'une carte « centrée » (moyenne des témoignages) : min ' + cent[0] + ' · médiane ' + cent[3] + ' · max ' + cent[5] + ' %');
 });
 
-console.log(fails ? '\n✗ ' + fails + ' échec(s)' : '\n✓ tous les tests passent');
+console.log(fails ? '\n✗ ' + fails + ' échec(s)' : '\n✓ tous les tests passent' + (QUICK ? ' (mode rapide : solveur non lancé)' : ''));
 process.exit(fails ? 1 : 0);

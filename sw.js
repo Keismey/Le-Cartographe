@@ -1,5 +1,5 @@
 /* Le Cartographe — service worker : page en réseau d'abord (mises à jour), le reste en cache ; musiques mises en cache au fil de l'eau */
-var V = '4c91135eb4', CORE = 'core-' + V, MUS = 'music-v1';
+var V = '40f0fd729e', CORE = 'core-' + V, MUS = 'music-v1';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'];
 
 self.addEventListener('install', function (e) {
