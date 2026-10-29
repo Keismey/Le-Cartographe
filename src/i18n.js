@@ -5,7 +5,7 @@
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessine le monde, un témoignage à la fois.',
-      version: 'v1.4',
+      version: 'v1.5',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -120,7 +120,7 @@
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'v1.4',
+      version: 'v1.5',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',

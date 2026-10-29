@@ -230,8 +230,11 @@
   function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
-  var VERSION = '1.4';
+  var VERSION = '1.5';
   var PATCH_NOTES = [
+    { v: '1.5', d: ['29 octobre 2026', '29 October 2026'],
+      fr: ['Le jeu démarre bien plus vite : l’écran titre s’affiche avant que le reste des images soit chargé.', 'Un bouton « Hub » ramène à la liste des jeux du studio.'],
+      en: ['The game starts much faster: the title screen shows before the rest of the pictures have loaded.', 'A “Hub” button takes you back to the studio’s list of games.'] },
     { v: '1.4', d: ['28 octobre 2026', '28 October 2026'],
       fr: ['Le bouton « Exporter la carte » devient « Partager ». Sur téléphone, le partage envoie l’image de la carte avec un petit texte : contrée, étoiles, score et lien. Rien du tracé n’est dévoilé.', 'Certaines applis (Threads, par exemple) ignorent le texte quand il accompagne une image : le bouton « Copier le texte » permet de le coller à la main.', 'Sur la carte finale, les petits points rouges au centre des tampons ont disparu.'],
       en: ['The “Export map” button is now “Share”. On a phone, sharing sends the map image along with a short text: region, stars, score and a link. Nothing about the layout is given away.', 'Some apps (Threads, for one) drop the text when it comes with an image: the “Copy the text” button lets you paste it yourself.', 'On the final map, the little red dots at the centre of the stamps are gone.'] },

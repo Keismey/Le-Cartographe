@@ -19,14 +19,14 @@ Lancer au moins `--rapide` avant chaque PR, et le test complet quand une contré
 
 ### Publier
 GitHub Pages sert la racine de la branche `main` (`.nojekyll` présent). `build.js` écrit dans `dist/`, qui n'est pas suivi par git ; après un build, copier à la racine les fichiers de `dist/` :
-`index.html`, `sw.js`, `manifest.webmanifest`, `icon-*.png` et `music/`. La version du service worker est l'empreinte de `index.html` : chaque nouveau build force la mise à jour chez les joueurs.
+`index.html`, `sw.js`, `manifest.webmanifest`, `icon-*.png`, `img/`, `fonts/` et `music/`. La version du service worker est l'empreinte de `index.html` : chaque nouveau build force la mise à jour chez les joueurs.
 
 ## Organisation
 - `src/core.js` : moteur pur (évaluation des indices, recalage, score), testé par `test/test.js`
 - `src/levels.js` : les contrées (données)
 - `src/i18n.js` : textes FR/EN, notes de mise à jour
 - `src/terrain.js`, `src/art.js` : zones de terrain au crayon, tampons vectoriels, parchemin, rose des vents
-- `src/assets.js` : images du jeu en WebP base64 (généré par `assets/process.py`)
+- `src/assets.js` : images du jeu en WebP base64 (généré par `assets/process.py`). Pour la page du site, `build.js` les écrit en fichiers dans `img/` et convertit les polices de `src/fonts.css` en woff2 dans `fonts/` : la page fait ~380 Ko au lieu de 3,8 Mo, et le service worker garde ces fichiers pour le hors-ligne. `artifact.html` garde tout embarqué.
 - `src/app.js` : interface et interactions ; `src/style.css`, `src/fonts.css` : styles et polices
 - `src/cloud.js` : sauvegarde en ligne facultative, seulement quand le jeu tourne comme Artifact claude.ai (sinon tout reste dans le `localStorage`)
 - `src/sw.js` : modèle du service worker (`__VERSION__` remplacé au build)
