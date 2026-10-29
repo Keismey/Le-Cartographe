@@ -30,9 +30,10 @@ var fontsCss = (function () {
   });
 })();
 var css = S('fonts.css') + S('style.css'), cssPage = fontsCss + S('style.css');
-var musicJs = (function () {
+var musicMap = {}, musicJs = (function () {
   var dir = path.join(__dirname, 'assets', 'music'), o = {};
-  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f; }); } catch (e) {}
+  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f + '?v=' + crypto.createHash('sha1').update(fs.readFileSync(path.join(dir, f))).digest('hex').slice(0, 8); }); } catch (e) {}
+  musicMap = o;
   return 'window.MUSIC=' + JSON.stringify(o) + ';';
 })();
 var logo = (function () { try { return 'window.STUDIO_LOGO="data:image/webp;base64,' + fs.readFileSync(path.join(__dirname, 'assets', 'out', 'keismey-studio.webp')).toString('base64') + '";'; } catch (e) { return ''; } })();
@@ -81,5 +82,5 @@ fs.writeFileSync(path.join(__dirname, 'dist', 'manifest.webmanifest'), JSON.stri
   background_color: '#15242c', theme_color: '#15242c',
   icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }]
 }, null, 2));
-fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver).replace('__FILES__', JSON.stringify(Object.keys(outFiles).map(function (p) { return p + full.split(p)[1].match(/^\?v=[0-9a-f]+/)[0]; }))));
+fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver).replace('__FILES__', JSON.stringify(Object.keys(outFiles).map(function (p) { return p + full.split(p)[1].match(/^\?v=[0-9a-f]+/)[0]; }))).replace('__MUSIC__', JSON.stringify(Object.keys(musicMap).map(function (k) { return musicMap[k]; }))));
 console.log('PWA : version ' + ver);
