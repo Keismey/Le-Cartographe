@@ -1,9 +1,17 @@
 /* Le Cartographe — service worker : page en réseau d'abord (mises à jour), le reste en cache ; musiques mises en cache au fil de l'eau */
 var V = '__VERSION__', CORE = 'core-' + V, MUS = 'music-v1';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'];
+/* images et polices (img/, fonts/) : gardées pour jouer hors ligne ; reprises du cache précédent ou du cache du navigateur quand c'est possible */
+var FILES = __FILES__;
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CORE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CORE).then(function (c) {
+    return c.addAll(SHELL).then(function () {
+      return Promise.all(FILES.map(function (f) {
+        return caches.match(f).then(function (hit) { return hit ? c.put(f, hit) : c.add(f); }).catch(function () {});
+      }));
+    });
+  }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {

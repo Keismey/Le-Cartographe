@@ -5,7 +5,7 @@
     fr: {
       title: 'Le Cartographe', titleA: 'Le', titleB: 'Cartographe',
       tagline: 'Dessine le monde, un témoignage à la fois.',
-      version: 'v1.4',
+      version: 'v1.5',
       play: 'Jouer', continue_: 'Continuer', atlas: 'Grand Atlas', notebook: 'Carnet', tools: 'Outils',
       submit: 'Remettre la carte', ask: 'Question (restants : {n})', scout: 'Éclaireur (restants : {n})',
       ruler: 'Règle-journées', ghost: 'Voir les indices', suspect: 'Je soupçonne ce témoin', single: 'Source unique',
@@ -67,7 +67,7 @@
       endingCard: 'La vraie carte', endingRevisit: 'Revoir la fin', endingDecide: 'Choisir la fin',
       endingPublishShort: 'Tu as publié la carte.', endingSecretShort: 'Tu as gardé le secret.',
 
-      settingsTitle: 'Options', notesBtn: 'Notes de mise à jour', saveIo: 'Sauvegarde : exporter, importer', bugBtn: 'Signaler un bug', supportBtn: 'Soutenir le studio', titleScreen: 'Écran titre', music: 'Musique', installApp: 'Application sur l’écran d’accueil', install: 'Installer', sound: 'Sons', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
+      settingsTitle: 'Options', notesBtn: 'Notes de mise à jour', saveIo: 'Sauvegarde : exporter, importer', bugBtn: 'Signaler un bug', hubBtn: 'Retour au hub', supportBtn: 'Soutenir le studio', titleScreen: 'Écran titre', music: 'Musique', installApp: 'Application sur l’écran d’accueil', install: 'Installer', sound: 'Bruitages', vibration: 'Vibration', textSize: 'Taille du texte', colorblind: 'Mode daltonien',
       on: 'activé', off: 'désactivé', exportSave: 'Exporter la sauvegarde', importSave: 'Importer une sauvegarde',
       resetYes: 'Effacer', savedOk: 'Sauvegarde importée.', importFail: 'Fichier de sauvegarde illisible.',
       saveText: 'Zone de sauvegarde (copie ou colle ce texte)', importBtn: 'Importer ce texte',
@@ -120,7 +120,7 @@
     en: {
       title: 'The Cartographer', titleA: 'The', titleB: 'Cartographer',
       tagline: 'Draw the world, one testimony at a time.',
-      version: 'v1.4',
+      version: 'v1.5',
       play: 'Play', continue_: 'Continue', atlas: 'Grand Atlas', notebook: 'Notebook', tools: 'Tools',
       submit: 'Submit map', ask: 'Question ({n} left)', scout: 'Scout ({n} left)',
       ruler: 'Day ruler', ghost: 'Show clues', suspect: 'I suspect this witness', single: 'Single source',
@@ -182,7 +182,7 @@
       endingCard: 'The true map', endingRevisit: 'See the ending again', endingDecide: 'Choose the ending',
       endingPublishShort: 'You published the map.', endingSecretShort: 'You kept the secret.',
 
-      settingsTitle: 'Options', notesBtn: 'Patch notes', saveIo: 'Save: export, import', bugBtn: 'Report a bug', supportBtn: 'Support the studio', titleScreen: 'Title screen', music: 'Music', installApp: 'App on your home screen', install: 'Install', sound: 'Sound', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
+      settingsTitle: 'Options', notesBtn: 'Patch notes', saveIo: 'Save: export, import', bugBtn: 'Report a bug', hubBtn: 'Back to the hub', supportBtn: 'Support the studio', titleScreen: 'Title screen', music: 'Music', installApp: 'App on your home screen', install: 'Install', sound: 'Sound effects', vibration: 'Vibration', textSize: 'Text size', colorblind: 'Colorblind mode',
       on: 'on', off: 'off', exportSave: 'Export save', importSave: 'Import a save',
       resetYes: 'Erase', savedOk: 'Save imported.', importFail: 'Unreadable save file.',
       saveText: 'Save area (copy or paste this text)', importBtn: 'Import this text',

@@ -172,7 +172,13 @@
     var im = new Image(); im.onload = function () { im._ok = true; if (Art.onload) Art.onload(); }; im.src = s; cache[path] = im;
     return im;
   }
-  function preload() { var A = root.ASSETS; if (!A) return; ['stamps', 'ui', 'portraits'].forEach(function (g) { Object.keys(A[g] || {}).forEach(function (k) { img(g + '.' + k); }); }); img('parchment'); img('table'); }
+  /* l'image du titre d'abord (écran affiché au lancement), le reste ensuite */
+  function preload() {
+    var A = root.ASSETS; if (!A) return;
+    var done = false, rest = function () { if (done) return; done = true; ['ui', 'stamps', 'portraits'].forEach(function (g) { Object.keys(A[g] || {}).forEach(function (k) { img(g + '.' + k); }); }); img('parchment'); img('table'); };
+    var t = img('title');
+    if (t && !t._ok) { t.addEventListener('load', rest); t.addEventListener('error', rest); setTimeout(rest, 3000); } else rest();
+  }
 
   var Art = { asset: asset, src: src, img: img, preload: preload, INK: INK, glyph: glyph, parchment: parchment, rose: rose, smooth: smooth, rng: rng };
   if (typeof module !== 'undefined' && module.exports) module.exports = Art;
