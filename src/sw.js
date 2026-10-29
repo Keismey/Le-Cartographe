@@ -7,7 +7,7 @@ self.addEventListener('install', function (e) {
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
-    return Promise.all(ks.filter(function (k) { return k !== CORE && k !== MUS; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(ks.filter(function (k) { return (k.indexOf('core-') === 0 || k.indexOf('music-') === 0) && k !== CORE && k !== MUS; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 
