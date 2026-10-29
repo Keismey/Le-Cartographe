@@ -231,8 +231,69 @@
     var el = $('#toast'); el.textContent = msg; el.classList.add('on');
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2200);
   }
-  function modal(nodes) { if (!$('#modal').classList.contains('on')) sfx('rustle'); var m = $('#modal'); clear(m); m.appendChild(h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true' }, nodes)); m.classList.add('on'); }
-  function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); }
+  function modal(nodes) {
+    if (!$('#modal').classList.contains('on')) sfx('rustle');
+    var m = $('#modal'), old = m.classList.contains('on') && $('#modal .box'), was = old ? dlgItems(old) : [], at = was.indexOf(document.activeElement), oldT = old && old.querySelector('h2');
+    oldT = oldT ? oldT.textContent : null;
+    dlgKeep(); clear(m);
+    var box = h('div', { class: 'box', role: 'dialog', 'aria-modal': 'true', tabindex: '-1' }, nodes), t2 = box.querySelector('h2');
+    if (t2) { if (!t2.id) t2.id = 'modal-t'; box.setAttribute('aria-labelledby', t2.id); }
+    m.appendChild(box); m.classList.add('on');
+    // même fenêtre redessinée (un réglage changé dans les Options) : le focus reste sur le même bouton
+    var now = at >= 0 && oldT !== null && t2 && t2.textContent === oldT ? dlgItems(box) : [];
+    if (now.length === was.length && now[at]) try { now[at].focus({ preventScroll: true }); } catch (e) {}
+    dlgFocus(box);
+  }
+  function closeModal() { $('#modal').classList.remove('on'); if (mus.once && mus.once.excl) musicStopOnce(false); dlgRestore(); }
+
+  /* Clavier et lecteur d'écran : à l'ouverture d'une fenêtre (la nôtre ou la « Sauvegarde » commune #ks-dlg),
+     le focus y entre, Tab reste dedans, et le focus revient au bouton qui l'a ouverte. Échap est déjà traité par ks-back.js. */
+  var dlgBack = null, dlgT = 0;
+  function openDlg() { var k = document.getElementById('ks-dlg'); return k ? k.querySelector('.kb') || k : ($('#modal').classList.contains('on') ? $('#modal .box') : null); }
+  function dlgKeep() {   // retient le bouton d'origine, sauf si le focus est déjà dans une fenêtre
+    clearTimeout(dlgT);
+    var a = document.activeElement;
+    if (a && a !== document.body && !(a.closest && a.closest('#modal, #ks-dlg'))) dlgBack = a;
+  }
+  function dlgFocus(box) {
+    var a = document.activeElement;
+    if (box && !(a && box.contains(a))) try { box.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function dlgRestore() {
+    clearTimeout(dlgT);
+    dlgT = setTimeout(function () {   // après le rendu : le bouton d'origine a pu disparaître (changement d'écran)
+      var box = openDlg();
+      if (box) { dlgFocus(box); return; }
+      var b = dlgBack; dlgBack = null;
+      if (b && document.contains(b) && b.getClientRects().length && !b.disabled) try { b.focus({ preventScroll: true }); } catch (e) {}
+    }, 0);
+  }
+  function dlgItems(box) {
+    return [].slice.call(box.querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')).filter(function (e) {
+      return e.tabIndex >= 0 && !e.disabled && e.getClientRects().length;   // rien de caché (y compris dans un <details> fermé)
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    var box = openDlg(); if (!box) return;
+    var list = dlgItems(box), a = document.activeElement;
+    if (!list.length) { e.preventDefault(); dlgFocus(box); return; }
+    if (!box.contains(a) || a === box) { e.preventDefault(); list[e.shiftKey ? list.length - 1 : 0].focus(); return; }
+    // élément suivant / précédent dans l'ordre de la page ; au bout, on repart de l'autre côté
+    var after = list.filter(function (x) { return a.compareDocumentPosition(x) & 4; }), before = list.filter(function (x) { return a.compareDocumentPosition(x) & 2; });
+    if (e.shiftKey && !before.length) { e.preventDefault(); list[list.length - 1].focus(); }
+    else if (!e.shiftKey && !after.length) { e.preventDefault(); list[0].focus(); }
+  }, true);
+  function ksOpened(n) { dlgKeep(); var kb = n.querySelector('.kb') || n; kb.tabIndex = -1; dlgFocus(kb); }
+  function dlgWatch() {   // la fenêtre commune est ajoutée / retirée par ks-studio.js
+    var k = document.getElementById('ks-dlg'); if (k) ksOpened(k);   // déjà ouverte avant le démarrage du jeu
+    new MutationObserver(function (recs) {
+      recs.forEach(function (r) {
+        [].forEach.call(r.addedNodes, function (n) { if (n.id === 'ks-dlg') ksOpened(n); });
+        [].forEach.call(r.removedNodes, function (n) { if (n.id === 'ks-dlg') dlgRestore(); });
+      });
+    }).observe(document.body, { childList: true });
+  }
 
   /* ───────────── notes de mise à jour (la plus récente en premier) ───────────── */
   var VERSION = '1.5';
@@ -1943,6 +2004,7 @@
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     document.addEventListener('visibilitychange', function () { if (document.hidden) { if (S.level && S.phase === 'play') persistProgress(); persistNow(); } });
     window.addEventListener('pagehide', function () { persistNow(); });
+    dlgWatch();
     try { if (window.Cloud) window.Cloud.start(function () { return save; }, mergeRemote); } catch (e) {}
     try { if (document.fonts) { document.fonts.load("italic 16px 'IM Fell English'"); document.fonts.ready.then(function () { draw(); }); } } catch (e) {}
     Art.preload();
