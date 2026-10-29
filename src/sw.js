@@ -51,22 +51,22 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(caches.open(MUS).then(function (c) {
       return c.match(key).then(function (hit) {
         if (hit) return rangeFrom(req, hit);
-        /* pas encore en cache : on laisse passer la requête, et on garde le fichier entier pour la prochaine fois (seulement les musiques de cette version) */
-        if (MUSIC.indexOf(key.slice(BASE.length)) >= 0) e.waitUntil(fetch(key).then(function (r) { if (r.ok) return c.put(key, r); }).catch(function () {}));
+        /* pas encore en cache : un seul téléchargement du fichier entier, joué tout de suite et gardé pour la prochaine fois */
+        var h = req.headers.get('range');
+        if (!h || /^bytes=0-$/.test(h)) return fetch(key).then(function (r) { if (r.ok) { var cp = r.clone(); e.waitUntil(c.put(key, cp).catch(function () {})); } return r; });
+        e.waitUntil(fetch(key).then(function (r) { if (r.ok) return c.put(key, r); }).catch(function () {}));
         return fetch(req);
       });
     }));
     return;
   }
 
-  /* la page du jeu : réseau d'abord pour recevoir les mises à jour ; si le réseau traîne plus de 4 s ou manque, la copie gardée */
+  /* la page du jeu : réseau d'abord pour recevoir les mises à jour ; si le réseau traîne plus de 4 s ou manque, la copie gardée.
+     La copie gardée est celle de l'installation : elle va toujours avec les images et polices de son cache. */
   if (url.pathname === BASE || url.pathname === BASE + 'index.html') {
     var net = fetch(req);
-    e.waitUntil(net.then(function (r) {
-      if (r.ok && r.type === 'basic') { var copy = r.clone(); return caches.open(CORE).then(function (c) { return c.put('index.html', copy); }); }
-    }).catch(function () {}));
     e.respondWith(caches.match('index.html').then(function (hit) {
-      if (!hit) return net.catch(function () { return caches.match('./'); });
+      if (!hit) return net;
       return Promise.race([net.then(function (r) { return r.ok ? r : hit; }, function () { return hit; }), new Promise(function (res) { setTimeout(function () { res(hit); }, 4000); })]);
     }));
     return;

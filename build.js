@@ -6,7 +6,8 @@ var S = function (f) { return fs.readFileSync(path.join(__dirname, 'src', f), 'u
    Le fragment pour l'outil Artifact garde tout embarqué. */
 var crypto = require('crypto');
 var outFiles = {};                       // chemin publié → contenu
-var put = function (dir, name, buf) { var h = crypto.createHash('sha1').update(buf).digest('hex').slice(0, 8), p = dir + '/' + name; outFiles[p] = buf; return p + '?v=' + h; };
+var hash = function (buf) { return crypto.createHash('sha1').update(buf).digest('hex').slice(0, 8); };
+var put = function (dir, name, buf) { var p = dir + '/' + name; outFiles[p] = buf; return p + '?v=' + hash(buf); };
 var assetsJs = (function () {
   var g = { window: {} }; new Function('window', S('assets.js'))(g.window);
   var walk = function (o, pre) {
@@ -32,7 +33,7 @@ var fontsCss = (function () {
 var css = S('fonts.css') + S('style.css'), cssPage = fontsCss + S('style.css');
 var musicMap = {}, musicJs = (function () {
   var dir = path.join(__dirname, 'assets', 'music'), o = {};
-  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f + '?v=' + crypto.createHash('sha1').update(fs.readFileSync(path.join(dir, f))).digest('hex').slice(0, 8); }); } catch (e) {}
+  try { fs.readdirSync(dir).filter(function (f) { return /\.mp3$/.test(f); }).forEach(function (f) { o[f.replace(/\.mp3$/, '')] = 'music/' + f + '?v=' + hash(fs.readFileSync(path.join(dir, f))); }); } catch (e) {}
   musicMap = o;
   return 'window.MUSIC=' + JSON.stringify(o) + ';';
 })();
@@ -82,5 +83,5 @@ fs.writeFileSync(path.join(__dirname, 'dist', 'manifest.webmanifest'), JSON.stri
   background_color: '#15242c', theme_color: '#15242c',
   icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }]
 }, null, 2));
-fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver).replace('__FILES__', JSON.stringify(Object.keys(outFiles).map(function (p) { return p + full.split(p)[1].match(/^\?v=[0-9a-f]+/)[0]; }))).replace('__MUSIC__', JSON.stringify(Object.keys(musicMap).map(function (k) { return musicMap[k]; }))));
+fs.writeFileSync(path.join(__dirname, 'dist', 'sw.js'), fs.readFileSync(path.join(__dirname, 'src', 'sw.js'), 'utf8').replace('__VERSION__', ver).replace('__FILES__', JSON.stringify(Object.keys(outFiles).map(function (p) { return p + full.split(p)[1].match(/^\?v=[0-9a-f]+/)[0]; }))).replace('__MUSIC__', JSON.stringify(Object.values(musicMap))));
 console.log('PWA : version ' + ver);
