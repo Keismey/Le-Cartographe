@@ -31,7 +31,7 @@
   }
 
   /* ───────────── sauvegarde ───────────── */
-  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, music: true, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, free: { maps: [], seq: 0 }, tutDone: false, started: false }; }
+  function defaultSave() { return { v: 1, settings: { lang: null, sound: true, music: true, mv: 1, sv: 1, vibrate: true, textSize: 0, cb: false }, progress: {}, notes: {}, inprogress: {}, free: { maps: [], seq: 0 }, tutDone: false, started: false }; }
   var save = (function () {
     var keys = [KEY, KEY + '.bak'];                       /* clé principale, puis copie de secours */
     for (var i = 0; i < keys.length; i++) {
@@ -39,6 +39,10 @@
     }
     return defaultSave();
   })();
+  /* volumes (curseurs) : une ancienne option « coupé » devient un volume à 0 ; music/sound suivent ensuite les curseurs */
+  if (save.settings.music === false) { save.settings.mv = 0; save.settings.music = true; }
+  if (save.settings.sound === false) { save.settings.sv = 0; save.settings.sound = true; }
+  save.settings.music = save.settings.mv > 0; save.settings.sound = save.settings.sv > 0;
   var saveTimer = null, saveWarned = false, lastBak = 0;
   function persistNow() {
     clearTimeout(saveTimer); save.t = Date.now();
@@ -89,10 +93,11 @@
   }
 
   /* ───────────── son & vibration ───────────── */
-  var AC = null;
+  var AC = null, OUT = null;                          /* OUT : volume général des bruitages */
   function audio() {
     if (!save.settings.sound) return null;
-    try { if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (C) AC = new C(); } if (AC && AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+    try { if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (C) { AC = new C(); OUT = AC.createGain(); OUT.connect(AC.destination); } } if (AC && AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+    if (OUT) OUT.gain.value = save.settings.sv;
     return AC;
   }
   function tone(f, d, type, vol, when, slide) {
@@ -101,7 +106,7 @@
     o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
     if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + d);
     g.gain.setValueAtTime(vol || .12, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
-    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + d + .02);
+    o.connect(g); g.connect(OUT); o.start(t0); o.stop(t0 + d + .02);
   }
   /* Bruitages synthétisés (aucun fichier) : plume, tampon, parchemin, pinceau, révélation */
   var NB = null, sfxLast = {};
@@ -120,7 +125,7 @@
     fl.type = type || 'bandpass'; fl.Q.value = q || 1; fl.frequency.setValueAtTime(f0, t0);
     if (f1 && f1 !== f0) fl.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
     g.gain.setValueAtTime(.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + (att || .01)); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
-    s.connect(fl); fl.connect(g); g.connect(a.destination);
+    s.connect(fl); fl.connect(g); g.connect(OUT);
     s.start(t0, Math.random() * 1.5); s.stop(t0 + dur + .03);
   }
   function bell(f, when, vol, dur) {
@@ -171,7 +176,7 @@
   function playOnce(name, o) {
     if (!MUSIC[name] || !save.settings.music || !mus.unlocked) return;
     musicStopOnce(true);
-    var a = new Audio(MUSIC[name]); a.volume = o && o.vol != null ? o.vol : .8;
+    var a = new Audio(MUSIC[name]); a.volume = (o && o.vol != null ? o.vol : .8) * save.settings.mv;
     var rec = { a: a, excl: !!(o && o.excl), duck: !!(o && o.duck), v: a.volume, fade: false };
     a.onended = function () { if (mus.once === rec) mus.once = null; };
     mus.once = rec;
@@ -209,7 +214,7 @@
         if (el.paused) return;
         var dd = el.duration, f = 1;
         if (isFinite(dd) && dd > MX * 2) { f = Math.min(1, (dd - el.currentTime) / MX); if (el.ramp) f = Math.min(f, el.currentTime / MX); if (el.currentTime > MX) el.ramp = false; }
-        try { el.volume = mclamp(T.g * MVOL * mus.dk * mclamp(f)); } catch (x) {}
+        try { el.volume = mclamp(T.g * MVOL * save.settings.mv * mus.dk * mclamp(f)); } catch (x) {}
       });
     });
   }
@@ -233,8 +238,8 @@
   var VERSION = '1.5';
   var PATCH_NOTES = [
     { v: '1.5', d: ['29 octobre 2026', '29 October 2026'],
-      fr: ['Le jeu démarre bien plus vite : l’écran titre s’affiche avant que le reste des images soit chargé.', 'Un bouton « Hub » ramène à la liste des jeux du studio.'],
-      en: ['The game starts much faster: the title screen shows before the rest of the pictures have loaded.', 'A “Hub” button takes you back to the studio’s list of games.'] },
+      fr: ['Le jeu démarre bien plus vite : l’écran titre s’affiche avant que le reste des images soit chargé.', 'Options : curseurs de volume pour la musique et les bruitages, bouton « Retour au hub », et le même ordre que dans les autres jeux du studio.'],
+      en: ['The game starts much faster: the title screen shows before the rest of the pictures have loaded.', 'Options: volume sliders for music and sound effects, a “Back to the hub” button, in the same order as the studio’s other games.'] },
     { v: '1.4', d: ['28 octobre 2026', '28 October 2026'],
       fr: ['Le bouton « Exporter la carte » devient « Partager ». Sur téléphone, le partage envoie l’image de la carte avec un petit texte : contrée, étoiles, score et lien. Rien du tracé n’est dévoilé.', 'Certaines applis (Threads, par exemple) ignorent le texte quand il accompagne une image : le bouton « Copier le texte » permet de le coller à la main.', 'Sur la carte finale, les petits points rouges au centre des tampons ont disparu.'],
       en: ['The “Export map” button is now “Share”. On a phone, sharing sends the map image along with a short text: region, stars, score and a link. Nothing about the layout is given away.', 'Some apps (Threads, for one) drop the text when it comes with an image: the “Copy the text” button lets you paste it yourself.', 'On the final map, the little red dots at the centre of the stamps are gone.'] },
@@ -1203,25 +1208,34 @@
   var installEv = null;
   window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEv = e; });
   window.addEventListener('appinstalled', function () { installEv = null; });
+  /* curseur de volume (0 à 100 %, par pas de 5) ; à 0, la musique ou les bruitages sont coupés */
+  function vol(label, k) {
+    var s = save.settings, out = h('output', { text: Math.round(s[k] * 100) + ' %' });
+    var r = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(s[k] * 100), 'aria-label': t(label),
+      oninput: function () { s[k] = r.value / 100; s.music = s.mv > 0; s.sound = s.sv > 0; out.textContent = r.value + ' %'; if (k === 'sv' && OUT) OUT.gain.value = s.sv; },
+      onchange: function () { persist(); if (k === 'sv') sfx('stamp'); } });
+    return h('label', { class: 'setrow vol' }, [h('span', { text: t(label) }), r, out]);
+  }
   function openSettings() {
     var s = save.settings;
     modal([
       h('h2', { text: t('settingsTitle') }),
+      vol('music', 'mv'),
+      vol('sound', 'sv'),
+      h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('lang') }), seg([['fr', 'Français'], ['en', 'English']], I.lang, function (v) { s.lang = v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('textSize') }), seg([[0, 'A'], [1, 'A+'], [2, 'A++']], s.textSize, function (v) { s.textSize = +v; persist(); refreshUI(); openSettings(); })]),
       h('div', { class: 'setrow' }, [h('span', { text: t('colorblind') }), seg([['0', t('off')], ['1', t('on')]], s.cb ? '1' : '0', function (v) { s.cb = v === '1'; persist(); refreshUI(); openSettings(); })]),
       installEv ? h('div', { class: 'setrow' }, [h('span', { text: t('installApp') }), h('button', { class: 'btn small', id: 'btn-install', text: t('install'), onclick: function () { var ev = installEv; installEv = null; try { ev.prompt(); } catch (x) {} closeModal(); } })]) : null,
-      h('div', { class: 'setrow' }, [h('span', { text: t('music') }), seg([['1', t('on')], ['0', t('off')]], s.music !== false ? '1' : '0', function (v) { s.music = v === '1'; persist(); openSettings(); })]),
-      h('div', { class: 'setrow' }, [h('span', { text: t('sound') }), seg([['1', t('on')], ['0', t('off')]], s.sound ? '1' : '0', function (v) { s.sound = v === '1'; persist(); openSettings(); })]),
-      h('div', { class: 'setrow' }, [h('span', { text: t('vibration') }), seg([['1', t('on')], ['0', t('off')]], s.vibrate ? '1' : '0', function (v) { s.vibrate = v === '1'; persist(); openSettings(); })]),
       h('div', { class: 'optstack' }, [
-        h('button', { class: 'btn', id: 'btn-notes', text: t('notesBtn'), onclick: openNotes }),
-        h('button', { class: 'btn', id: 'btn-tuto', text: t('tutBtn'), onclick: startTuto }),
         h('button', { class: 'btn', id: 'btn-saveio', text: window.KS ? t('saveIo') : t('exportSave') + ' / ' + t('importSave'), onclick: function () {
           if (window.KS) { closeModal(); persistNow(); window.KS.saveDialog({ lang: I.lang, keys: [KEY, KEY + '.bak'], save: persistNow, file: 'le-cartographe', accent: '#d6b25a' }); } else openSaveIO(); } }),
+        h('button', { class: 'btn', id: 'btn-notes', text: t('notesBtn'), onclick: openNotes }),
+        h('button', { class: 'btn', id: 'btn-tuto', text: t('tutBtn'), onclick: startTuto }),
+        h('button', { class: 'btn', id: 'btn-title', text: t('titleScreen'), onclick: function () { persistNow(); closeModal(); buildTitle(); go('title'); } }),
         window.KS ? h('button', { class: 'btn', id: 'btn-bug', text: t('bugBtn'), onclick: function () { persistNow(); window.KS.bug('Le Cartographe', I.lang); } }) : null,
         window.KS ? h('button', { class: 'btn', id: 'btn-support', text: t('supportBtn'), onclick: function () { window.KS.support(); } }) : null,
-        h('button', { class: 'btn', id: 'btn-title', text: t('titleScreen'), onclick: function () { persistNow(); closeModal(); buildTitle(); go('title'); } }),
+        h('button', { class: 'btn', id: 'btn-hub', text: t('hubBtn'), onclick: function () { persistNow(); if (window.KSBack) window.KSBack.toHub(); } }),
         h('button', { class: 'btn', id: 'btn-reset', text: t('reset'), onclick: openReset })
       ]),
       h('p', { class: 'help', id: 'save-status', text: (window.Cloud && window.Cloud.active()) ? t('saveCloud') : t('saveLocal') }),

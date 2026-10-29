@@ -222,6 +222,9 @@ h3.sec { font-size: 1.05em; color: var(--brass); margin-top: 6px; }
 .seg .btn.on { background: var(--night-3); border-color: var(--brass); color: var(--paper); }
 .setrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
 .setrow > span { flex: none; }
+.setrow.vol input[type=range] { flex: 1; min-width: 0; height: 44px; accent-color: #8a5a2b; }
+.setrow.vol > span { min-width: 5.6em; }
+.setrow.vol output { flex: none; min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
 #toast { position: absolute; z-index: 30; left: 50%; bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 72px)); transform: translateX(-50%); max-width: 90%; padding: 10px 16px; border-radius: 22px; background: var(--paper); color: var(--paper-ink); font-weight: 700; display: none; pointer-events: none; text-align: center; }
 #toast.on { display: block; }
 
