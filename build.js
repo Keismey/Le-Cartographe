@@ -22,7 +22,7 @@ var assetsJs = (function () {
   return 'window.ASSETS = ' + JSON.stringify(g.window.ASSETS) + ';\n';
 })();
 var fontsCss = (function () {
-  var py = 'import sys,base64,io\nfrom fontTools.ttLib import TTFont\nf=TTFont(io.BytesIO(base64.b64decode(sys.stdin.read())));f.flavor="woff2";o=io.BytesIO();f.save(o);sys.stdout.write(base64.b64encode(o.getvalue()).decode())';
+  var py = 'import sys,base64,io\nfrom fontTools.ttLib import TTFont\nf=TTFont(io.BytesIO(base64.b64decode(sys.stdin.read())),recalcTimestamp=False);f.flavor="woff2";o=io.BytesIO();f.save(o);sys.stdout.write(base64.b64encode(o.getvalue()).decode())';
   var n = 0;
   return S('fonts.css').replace(/url\(data:font\/woff;base64,([^)]+)\)\s*format\(["']?woff["']?\)|url\(data:font\/woff;base64,([^)]+)\)/g, function (all, a, b) {
     var w2 = Buffer.from(require('child_process').execFileSync('python3', ['-c', py], { input: a || b, maxBuffer: 1 << 26 }).toString(), 'base64');
