@@ -902,22 +902,54 @@
     var layer = $('#tutlayer'); if (!layer || !S.tut) return;
     var st = TUT_STEPS[S.tut.step], tg = st && $(st.target), hole = $('#tuthole'), bub = $('#tutbub');
     var gr = $('#game').getBoundingClientRect();
-    if (!tg || !tg.getBoundingClientRect().width) { hole.style.display = 'none'; bub.style.top = '64px'; bub.style.bottom = 'auto'; return; }
-    if (tutShown !== S.tut.step) { tutShown = S.tut.step; try { if ($('#panel').contains(tg)) tg.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
-    var r = tg.getBoundingClientRect(), pad = st.soft ? 0 : 5;
-    hole.style.display = 'block'; hole.classList.toggle('soft', !!st.soft);
-    hole.style.left = (r.left - gr.left - pad) + 'px'; hole.style.top = (r.top - gr.top - pad) + 'px';
-    hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
-    /* la bulle va du côté opposé à la cible, pour ne jamais la cacher */
-    var mid = (r.top + r.bottom) / 2 - gr.top, low = mid > gr.height * .5;
-    if (low) { bub.style.top = '58px'; bub.style.bottom = 'auto'; } else { bub.style.bottom = '70px'; bub.style.top = 'auto'; }
+    if (tg && tg.getBoundingClientRect().width) {
+      if (tutShown !== S.tut.step) { tutShown = S.tut.step; try { if ($('#panel').contains(tg)) tg.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+      var r = tg.getBoundingClientRect(), pad = st.soft ? 0 : 5;
+      hole.style.display = 'block'; hole.classList.toggle('soft', !!st.soft);
+      hole.style.left = (r.left - gr.left - pad) + 'px'; hole.style.top = (r.top - gr.top - pad) + 'px';
+      hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
+    } else { hole.style.display = 'none'; tg = null; }
+    tutBubPlace(bub, gr, tg);
+  }
+  /* La bulle ne recouvre jamais la cible, et le moins possible la carte et la barre du bas :
+     on essaie quelques places (haut, bas, juste au-dessus ou au-dessous de la cible, pleine largeur
+     ou colonne de droite en paysage) et on garde celle qui cache le moins. */
+  var tutBubH = {}, tutBubAt = null;
+  function tutBubPlace(bub, gr, tgEl) {
+    var rel = function (el) { var b = el && el.getBoundingClientRect(); return b && b.width ? { l: b.left - gr.left, t: b.top - gr.top, r: b.right - gr.left, b: b.bottom - gr.top } : null; };
+    var ov = function (a, b) { return a && b ? Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t)) : 0; };
+    var top = rel($('#game .topbar')), mw = rel($('#mapwrap')), pn = rel($('#panel')), bar = rel($('#bar')), tg = rel(tgEl);
+    if (tg) { tg.l -= 8; tg.t -= 8; tg.r += 8; tg.b += 8; }
+    var y0 = (top ? top.b : 52) + 6, y1 = gr.height - 6;
+    var cols = [[12, gr.width - 12]];
+    if (mw && pn && pn.l >= mw.r - 1 && gr.width - 12 - (pn.l + 8) >= 260) cols.push([pn.l + 8, gr.width - 12]);
+    var best = null, keep = null;
+    cols.forEach(function (c, ci) {
+      var w = c[1] - c[0], key = S.tut.step + '|' + w + '|' + Math.round(gr.height);
+      if (!(key in tutBubH)) { bub.style.left = c[0] + 'px'; bub.style.width = w + 'px'; tutBubH[key] = bub.offsetHeight; }
+      var bh = tutBubH[key], hi = Math.max(y0, y1 - bh);
+      var ys = [y0, hi]; if (tg) ys.push(tg.b + 4, tg.t - 4 - bh);
+      ys.forEach(function (y, yi) {
+        y = Math.min(Math.max(y, y0), hi);
+        var box = { l: c[0], t: y, r: c[1], b: y + bh };
+        var cost = (ov(box, mw) + ov(box, bar) * .5) / (w * bh) + ci * .05 + (tg ? Math.abs((tg.t + tg.b) / 2 - (y + bh / 2)) / gr.height * .1 : 0);
+        if (ov(box, tg) > 0) cost += 10;
+        var cand = { cost: cost, x: c[0], w: w, y: y, id: ci + ':' + yi };
+        if (!best || cost < best.cost) best = cand;
+        if (tutBubAt && tutBubAt.id === cand.id) keep = cand;
+      });
+    });
+    /* on ne change de place que si c'est nettement mieux, pour que la bulle ne saute pas pendant un défilement */
+    if (keep && keep.cost < 10 && keep.cost <= best.cost + .05) best = keep;
+    tutBubAt = best;
+    bub.style.left = best.x + 'px'; bub.style.width = best.w + 'px'; bub.style.top = best.y + 'px'; bub.style.bottom = 'auto';
   }
   function renderTut() {
     var g = $('#game'); if (!g) return;
     var layer = $('#tutlayer');
     if (!S.tut || S.phase !== 'play' || S.screen !== 'game') { if (layer) layer.remove(); clearInterval(tutTimer); tutTimer = null; return; }
     if (!layer) { layer = h('div', { id: 'tutlayer' }, [h('div', { id: 'tuthole' }), h('div', { id: 'tutbub' })]); g.appendChild(layer); }
-    var step = S.tut.step, st = TUT_STEPS[step], last = step >= TUT_N - 1, bub = $('#tutbub'); clear(bub);
+    var step = S.tut.step, st = TUT_STEPS[step], last = step >= TUT_N - 1, bub = $('#tutbub'); clear(bub); tutBubH = {}; tutBubAt = null;
     var op = portraitKey('orlan', 'tut'); if (op) bub.appendChild(op);
     bub.appendChild(h('div', { class: 't' }, [h('small', { text: t('tutStep', { i: step + 1, n: TUT_N }) }), t('tutA' + (step + 1))]));
     var btns = h('div', { class: 'tb' });
