@@ -1918,7 +1918,11 @@
       ]);
       return null;
     }
-    if (window.KSBack) window.KSBack.init({ back: onBack, lang: function () { return save.settings.lang === 'en' ? 'en' : 'fr'; } });
+    if (window.KSBack) window.KSBack.init({
+      back: onBack,
+      lang: function () { return save.settings.lang === 'en' ? 'en' : 'fr'; },
+      title: function () { return S.screen === 'title' && !$('#modal').classList.contains('on'); }
+    });
     window.__cart = { startTuto: startTuto, tutCheck: tutCheck, openKing: openKing, mus: mus, playOnce: playOnce, sfx: sfx, S: S, save: function () { return save; }, view: function () { return view; }, w2s: w2s, s2w: s2w, startLevel: startLevel, openBriefing: openBriefing, go: go, doSubmit: doSubmit, placeAt: placeAt, snap: snap, changed: changed, askWitness: askWitness, useScout: useScout, renderAll: renderAll, setLang: function (l) { save.settings.lang = l; refreshUI(); } };
     if (document.fonts && document.fonts.load) { document.fonts.load("16px 'IM Fell English'").then(function () { draw(); }, function () {}); }
   }

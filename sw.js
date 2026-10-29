@@ -1,5 +1,5 @@
 /* Le Cartographe — service worker : page en réseau d'abord (mises à jour), le reste en cache ; musiques mises en cache au fil de l'eau */
-var V = '7bba804b41', CORE = 'core-' + V, MUS = 'music-v1';
+var V = '40f0fd729e', CORE = 'core-' + V, MUS = 'music-v1';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'];
 
 self.addEventListener('install', function (e) {
@@ -7,7 +7,7 @@ self.addEventListener('install', function (e) {
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
-    return Promise.all(ks.filter(function (k) { return k !== CORE && k !== MUS; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(ks.filter(function (k) { return (k.indexOf('core-') === 0 || k.indexOf('music-') === 0) && k !== CORE && k !== MUS; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 
