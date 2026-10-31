@@ -1,5 +1,5 @@
 /* Le Cartographe — service worker : page en réseau d'abord (mises à jour), le reste en cache ; musiques mises en cache au fil de l'eau */
-var V = '9bdc130dea', CORE = 'core-' + V, MUS = 'music-v1';
+var V = '9957c01b25', CORE = 'core-' + V, MUS = 'music-v1';
 /* une seule copie de la page (« index.html ») ; les grandes icônes (512 px) ne servent qu'à l'installation, le navigateur les demande lui-même */
 var SHELL = ['index.html', 'manifest.webmanifest', 'icon-192.png'];
 /* images et polices (img/, fonts/) : gardées pour jouer hors ligne ; reprises du cache précédent ou du cache du navigateur quand c'est possible */
